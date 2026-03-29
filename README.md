@@ -11,7 +11,7 @@
 
 ## 停车模块引导
 
-本仓库已新增基于 RuoYi-Vue 的业务模块 `ruoyi-parking`，初始引导在后端提供 `controller`、`service`、`domain` 三个包的结构，开放 `/parking/health` 简易健康检查接口，并在 `ruoyi-ui/src/api/parking/` 与 `ruoyi-ui/src/views/parking/` 下准备前端占位文件。
+本仓库已新增基于 RuoYi-Vue 的业务模块 `ruoyi-parking`，初始引导在后端提供 `controller`、`service`、`domain` 三个包的结构，开放 `/parking/health` 简易健康检查接口，并在 `ruoyi-ui/src/api/parking/` 与 `ruoyi-ui/src/views/parking/` 下准备前端占位文件。停车模块的引导建表与演示数据脚本位于 `sql/parking/parking_bootstrap.sql`，其中演示数据默认依赖标准 RuoYi 初始化用户 `sys_user.user_id=1` 与 `sys_user.user_id=2` 已存在。
 
 ## 平台简介
 
