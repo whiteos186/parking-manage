@@ -3,6 +3,7 @@ package com.ruoyi.parking;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -10,17 +11,17 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 
 class ParkingMenuScriptTest
 {
-    private static final int SYS_MENU_COLUMN_COUNT = 20;
-
     @Test
-    void parkingMenuScriptContainsMinimalParkingMenuTree() throws IOException
+    void parkingMenuScriptUsesBusinessKeyUpsertStrategyWithExactRows() throws IOException
     {
         Path scriptPath = locateParkingMenuScript();
         assertTrue(Files.exists(scriptPath), () -> "Missing parking menu script: " + scriptPath);
@@ -28,20 +29,70 @@ class ParkingMenuScriptTest
         String sql = Files.readString(scriptPath, StandardCharsets.UTF_8);
         String normalizedSql = stripLineComments(sql);
 
-        List<List<String>> sysMenuRows = extractSysMenuInsertRows(normalizedSql);
-        assertTrue(!sysMenuRows.isEmpty(), "Expected at least one sys_menu insert row in parking_menu.sql");
+        assertFalse(
+            Pattern.compile("delete\\s+from\\s+sys_menu\\s+where\\s+menu_id", Pattern.CASE_INSENSITIVE)
+                .matcher(normalizedSql)
+                .find(),
+            "Menu bootstrap must not delete sys_menu rows by fixed menu_id"
+        );
 
-        MenuRow rootDirectory = findByMenuTypeAndParent(sysMenuRows, "M", "0");
-        assertNotNull(rootDirectory, "Expected a top-level parking directory menu (menu_type='M', parent_id='0')");
-        assertEquals("parking", rootDirectory.path, "Expected parking top-level menu path to be 'parking'");
+        assertTrue(normalizedSql.contains("@parking_root_id"), "Expected SQL variable @parking_root_id");
+        assertTrue(normalizedSql.contains("@parking_overview_id"), "Expected SQL variable @parking_overview_id");
 
-        MenuRow pageMenu = findByMenuTypeAndParent(sysMenuRows, "C", rootDirectory.menuId);
-        assertNotNull(pageMenu, "Expected a child page menu under parking directory");
-        assertEquals("parking/index", pageMenu.component, "Expected parking child menu component to be 'parking/index'");
+        List<MenuInsertSpec> inserts = extractInsertIfNotExistsSpecs(normalizedSql);
+        assertEquals(3, inserts.size(), "Expected exactly 3 parking menu bootstrap insert-if-not-exists blocks");
 
-        MenuRow queryButton = findByMenuTypeAndParent(sysMenuRows, "F", pageMenu.menuId);
-        assertNotNull(queryButton, "Expected at least one function/button permission under parking page");
-        assertEquals("parking:overview:query", queryButton.perms, "Expected function permission parking:overview:query");
+        MenuInsertSpec root = findInsertByMenuType(inserts, "'M'");
+        assertNotNull(root, "Expected directory insert block (menu_type='M')");
+        assertEquals("'停车管理'", root.valuesByColumn().get("menu_name"));
+        assertEquals("0", root.valuesByColumn().get("parent_id"));
+        assertEquals("'parking'", root.valuesByColumn().get("path"));
+        assertEquals("null", root.valuesByColumn().get("component"));
+        assertEquals("'guide'", root.valuesByColumn().get("icon"));
+        assertTrue(
+            root.notExistsClause().contains("path = 'parking'") && root.notExistsClause().contains("menu_type = 'M'"),
+            "Expected root insert to use path/menu_type business key"
+        );
+
+        MenuInsertSpec page = findInsertByMenuType(inserts, "'C'");
+        assertNotNull(page, "Expected page insert block (menu_type='C')");
+        assertEquals("'停车概览'", page.valuesByColumn().get("menu_name"));
+        assertEquals("@parking_root_id", page.valuesByColumn().get("parent_id"));
+        assertEquals("'index'", page.valuesByColumn().get("path"));
+        assertEquals("'parking/index'", page.valuesByColumn().get("component"));
+        assertEquals("'parking:overview:list'", page.valuesByColumn().get("perms"));
+        assertEquals("'build'", page.valuesByColumn().get("icon"));
+        assertTrue(
+            page.notExistsClause().contains("component = 'parking/index'") && page.notExistsClause().contains("menu_type = 'C'"),
+            "Expected page insert to use component/menu_type business key"
+        );
+
+        MenuInsertSpec button = findInsertByMenuType(inserts, "'F'");
+        assertNotNull(button, "Expected function insert block (menu_type='F')");
+        assertEquals("'停车概览查询'", button.valuesByColumn().get("menu_name"));
+        assertEquals("@parking_overview_id", button.valuesByColumn().get("parent_id"));
+        assertEquals("'parking:overview:query'", button.valuesByColumn().get("perms"));
+        assertEquals("'#'", button.valuesByColumn().get("icon"));
+        assertTrue(
+            button.notExistsClause().contains("perms = 'parking:overview:query'") && button.notExistsClause().contains("menu_type = 'F'"),
+            "Expected function insert to use perms/menu_type business key"
+        );
+    }
+
+    @Test
+    void parkingOverviewPermissionIsActuallyWiredInFrontAndBack() throws IOException
+    {
+        String vue = readProjectFile("ruoyi-ui/src/views/parking/index.vue");
+        assertTrue(
+            vue.contains("v-hasPermi=\"['parking:overview:query']\""),
+            "Expected parking page query button to be guarded by v-hasPermi parking:overview:query"
+        );
+
+        String controller = readProjectFile("ruoyi-parking/src/main/java/com/ruoyi/parking/controller/ParkingHealthController.java");
+        assertTrue(
+            controller.contains("@PreAuthorize(\"@ss.hasPermi('parking:overview:query')\")"),
+            "Expected backend endpoint to enforce parking:overview:query via @PreAuthorize"
+        );
     }
 
     private Path locateParkingMenuScript()
@@ -59,95 +110,41 @@ class ParkingMenuScriptTest
         return Paths.get("sql", "parking", "parking_menu.sql");
     }
 
-    private static List<List<String>> extractSysMenuInsertRows(String sql)
+    private static List<MenuInsertSpec> extractInsertIfNotExistsSpecs(String sql)
     {
         Pattern insertPattern = Pattern.compile(
-            "insert\\s+into\\s+`?sys_menu`?(?:\\s*\\([^)]*\\))?\\s*values\\s*(.*?);",
+            "insert\\s+into\\s+`?sys_menu`?\\s*\\((.*?)\\)\\s*select\\s*(.*?)\\s*from\\s+dual\\s+where\\s+not\\s+exists\\s*\\((.*?)\\);",
             Pattern.CASE_INSENSITIVE | Pattern.DOTALL
         );
         Matcher matcher = insertPattern.matcher(sql);
 
-        List<List<String>> rows = new ArrayList<>();
+        List<MenuInsertSpec> rows = new ArrayList<>();
         while (matcher.find())
         {
-            List<String> tuples = parseSqlTuples(matcher.group(1));
-            for (String tuple : tuples)
-            {
-                List<String> values = splitSqlValues(tuple);
-                assertEquals(
-                    SYS_MENU_COLUMN_COUNT,
-                    values.size(),
-                    "Expected sys_menu inserts to use full-value style with 20 columns"
-                );
-                rows.add(values);
-            }
+            List<String> columns = parseCsv(matcher.group(1));
+            List<String> values = parseCsv(matcher.group(2));
+            assertEquals(columns.size(), values.size(), "Insert columns and select values count must match");
+            rows.add(new MenuInsertSpec(columns, values, matcher.group(3)));
         }
         return rows;
     }
 
-    private static List<String> parseSqlTuples(String valuesBlock)
-    {
-        List<String> tuples = new ArrayList<>();
-        int depth = 0;
-        boolean inString = false;
-        int tupleStart = -1;
-
-        for (int i = 0; i < valuesBlock.length(); i++)
-        {
-            char ch = valuesBlock.charAt(i);
-            if (ch == '\'')
-            {
-                if (inString && i + 1 < valuesBlock.length() && valuesBlock.charAt(i + 1) == '\'')
-                {
-                    i++;
-                }
-                else
-                {
-                    inString = !inString;
-                }
-            }
-            if (inString)
-            {
-                continue;
-            }
-
-            if (ch == '(')
-            {
-                if (depth == 0)
-                {
-                    tupleStart = i;
-                }
-                depth++;
-            }
-            else if (ch == ')')
-            {
-                depth--;
-                if (depth == 0 && tupleStart >= 0)
-                {
-                    tuples.add(valuesBlock.substring(tupleStart + 1, i));
-                    tupleStart = -1;
-                }
-            }
-        }
-        return tuples;
-    }
-
-    private static List<String> splitSqlValues(String tupleContent)
+    private static List<String> parseCsv(String csvBlock)
     {
         List<String> values = new ArrayList<>();
         StringBuilder current = new StringBuilder();
         int nestedDepth = 0;
         boolean inString = false;
 
-        for (int i = 0; i < tupleContent.length(); i++)
+        for (int i = 0; i < csvBlock.length(); i++)
         {
-            char ch = tupleContent.charAt(i);
+            char ch = csvBlock.charAt(i);
             if (ch == '\'')
             {
                 current.append(ch);
-                if (inString && i + 1 < tupleContent.length() && tupleContent.charAt(i + 1) == '\'')
+                if (inString && i + 1 < csvBlock.length() && csvBlock.charAt(i + 1) == '\'')
                 {
-                    current.append(tupleContent.charAt(i + 1));
+                    current.append(csvBlock.charAt(i + 1));
                     i++;
                 }
                 else
@@ -169,7 +166,7 @@ class ParkingMenuScriptTest
                 }
                 else if (ch == ',' && nestedDepth == 0)
                 {
-                    values.add(normalizeSqlLiteral(current.toString()));
+                    values.add(normalizeSqlToken(current.toString()));
                     current.setLength(0);
                     continue;
                 }
@@ -177,18 +174,13 @@ class ParkingMenuScriptTest
             current.append(ch);
         }
 
-        values.add(normalizeSqlLiteral(current.toString()));
+        values.add(normalizeSqlToken(current.toString()));
         return values;
     }
 
-    private static String normalizeSqlLiteral(String rawValue)
+    private static String normalizeSqlToken(String rawValue)
     {
-        String trimmed = rawValue.trim();
-        if (trimmed.length() >= 2 && trimmed.startsWith("'") && trimmed.endsWith("'"))
-        {
-            return trimmed.substring(1, trimmed.length() - 1).replace("''", "'");
-        }
-        return trimmed;
+        return rawValue.trim();
     }
 
     private static String stripLineComments(String sql)
@@ -196,48 +188,70 @@ class ParkingMenuScriptTest
         return sql.replaceAll("(?m)--.*$", "");
     }
 
-    private static MenuRow findByMenuTypeAndParent(List<List<String>> rows, String menuType, String parentId)
+    private static String readProjectFile(String relativePath) throws IOException
     {
-        for (List<String> values : rows)
+        Path current = Paths.get("").toAbsolutePath().normalize();
+        while (current != null)
         {
-            MenuRow row = MenuRow.from(values);
-            if (menuType.equals(row.menuType) && parentId.equals(row.parentId))
+            Path candidate = current.resolve(relativePath);
+            if (Files.exists(candidate))
             {
-                return row;
+                return Files.readString(candidate, StandardCharsets.UTF_8);
+            }
+            current = current.getParent();
+        }
+        throw new IOException("Missing file: " + relativePath);
+    }
+
+    private static MenuInsertSpec findInsertByMenuType(List<MenuInsertSpec> inserts, String menuTypeToken)
+    {
+        for (MenuInsertSpec insert : inserts)
+        {
+            String menuType = insert.valuesByColumn().get("menu_type");
+            if (menuTypeToken.equals(menuType))
+            {
+                return insert;
             }
         }
         return null;
     }
 
-    private static final class MenuRow
+    private static final class MenuInsertSpec
     {
-        private final String menuId;
-        private final String parentId;
-        private final String path;
-        private final String component;
-        private final String menuType;
-        private final String perms;
+        private final List<String> columns;
+        private final List<String> values;
+        private final String notExistsClause;
 
-        private MenuRow(String menuId, String parentId, String path, String component, String menuType, String perms)
+        private MenuInsertSpec(List<String> columns, List<String> values, String notExistsClause)
         {
-            this.menuId = menuId;
-            this.parentId = parentId;
-            this.path = path;
-            this.component = component;
-            this.menuType = menuType;
-            this.perms = perms;
+            this.columns = columns;
+            this.values = values;
+            this.notExistsClause = notExistsClause;
         }
 
-        private static MenuRow from(List<String> values)
+        private Map<String, String> valuesByColumn()
         {
-            return new MenuRow(
-                values.get(0),
-                values.get(2),
-                values.get(4),
-                values.get(5),
-                values.get(10),
-                values.get(13)
-            );
+            Map<String, String> map = new LinkedHashMap<>();
+            for (int i = 0; i < columns.size(); i++)
+            {
+                map.put(stripOptionalIdentifierQuotes(columns.get(i)), values.get(i));
+            }
+            return map;
         }
+
+        private String notExistsClause()
+        {
+            return notExistsClause;
+        }
+    }
+
+    private static String stripOptionalIdentifierQuotes(String identifier)
+    {
+        String trimmed = identifier.trim();
+        if (trimmed.length() >= 2 && trimmed.startsWith("`") && trimmed.endsWith("`"))
+        {
+            return trimmed.substring(1, trimmed.length() - 1);
+        }
+        return trimmed;
     }
 }

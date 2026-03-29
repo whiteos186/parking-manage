@@ -3,7 +3,13 @@
     <el-card>
       <div slot="header">Parking Module Placeholder</div>
       <p>This is the initial parking module scaffold page.</p>
-      <el-button :loading="loading" type="primary" size="mini" @click="checkHealth">
+      <el-button
+        v-hasPermi="['parking:overview:query']"
+        :loading="loading"
+        type="primary"
+        size="mini"
+        @click="checkHealth"
+      >
         Check /parking/health
       </el-button>
       <p v-if="healthError" class="health-error">{{ healthError }}</p>
