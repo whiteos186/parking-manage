@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.parking.mapper.ParkingOverviewMapper">
+
+    <resultMap type="ParkingLot" id="ParkingLotResult">
+        <id property="lotId" column="lot_id"/>
+        <result property="lotName" column="lot_name"/>
+        <result property="lotAddress" column="lot_address"/>
+        <result property="totalSpaceCount" column="total_space_count"/>
+        <result property="availableSpaceCount" column="available_space_count"/>
+        <result property="monthlyPrice" column="monthly_price"/>
+        <result property="tempHourPrice" column="temp_hour_price"/>
+        <result property="status" column="status"/>
+        <result property="delFlag" column="del_flag"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <resultMap type="ParkingSpace" id="ParkingSpaceResult">
+        <id property="spaceId" column="space_id"/>
+        <result property="lotId" column="lot_id"/>
+        <result property="lotName" column="lot_name"/>
+        <result property="spaceCode" column="space_code"/>
+        <result property="areaName" column="area_name"/>
+        <result property="floorNo" column="floor_no"/>
+        <result property="spaceType" column="space_type"/>
+        <result property="status" column="status"/>
+        <result property="delFlag" column="del_flag"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <resultMap type="ParkingOverviewStats" id="ParkingOverviewStatsResult">
+        <result property="lotCount" column="lot_count"/>
+        <result property="totalSpaceCount" column="total_space_count"/>
+        <result property="availableSpaceCount" column="available_space_count"/>
+        <result property="occupiedSpaceCount" column="occupied_space_count"/>
+        <result property="disabledSpaceCount" column="disabled_space_count"/>
+        <result property="lockedSpaceCount" column="locked_space_count"/>
+    </resultMap>
+
+    <select id="selectOverviewStats" resultMap="ParkingOverviewStatsResult">
+        select
+            (select count(1) from parking_lot where del_flag = '0') as lot_count,
+            (select count(1) from parking_space where del_flag = '0') as total_space_count,
+            (select count(1) from parking_space where del_flag = '0' and status = '0') as available_space_count,
+            (select count(1) from parking_space where del_flag = '0' and status = '1') as occupied_space_count,
+            (select count(1) from parking_space where del_flag = '0' and status = '2') as disabled_space_count,
+            (select count(1) from parking_space where del_flag = '0' and status = '3') as locked_space_count
+    </select>
+
+    <select id="selectParkingLotList" parameterType="ParkingLot" resultMap="ParkingLotResult">
+        select
+            lot_id,
+            lot_name,
+            lot_address,
+            total_space_count,
+            available_space_count,
+            monthly_price,
+            temp_hour_price,
+            status,
+            del_flag,
+            create_by,
+            create_time,
+            update_by,
+            update_time,
+            remark
+        from parking_lot
+        where del_flag = '0'
+        <if test="lotName != null and lotName != ''">
+            and lot_name like concat('%', #{lotName}, '%')
+        </if>
+        <if test="status != null and status != ''">
+            and status = #{status}
+        </if>
+        order by lot_id desc
+    </select>
+
+    <select id="selectParkingSpaceList" parameterType="ParkingSpace" resultMap="ParkingSpaceResult">
+        select
+            s.space_id,
+            s.lot_id,
+            l.lot_name,
+            s.space_code,
+            s.area_name,
+            s.floor_no,
+            s.space_type,
+            s.status,
+            s.del_flag,
+            s.create_by,
+            s.create_time,
+            s.update_by,
+            s.update_time,
+            s.remark
+        from parking_space s
+        left join parking_lot l on l.lot_id = s.lot_id and l.del_flag = '0'
+        where s.del_flag = '0'
+        <if test="lotId != null">
+            and s.lot_id = #{lotId}
+        </if>
+        <if test="spaceCode != null and spaceCode != ''">
+            and s.space_code like concat('%', #{spaceCode}, '%')
+        </if>
+        <if test="status != null and status != ''">
+            and s.status = #{status}
+        </if>
+        order by s.space_id desc
+    </select>
+
+</mapper>
