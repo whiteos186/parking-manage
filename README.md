@@ -9,6 +9,10 @@
 	<a href="https://gitee.com/y_project/RuoYi-Vue/blob/master/LICENSE"><img src="https://img.shields.io/github/license/mashape/apistatus.svg"></a>
 </p>
 
+## 停车模块引导
+
+本仓库已新增基于 RuoYi-Vue 的业务模块 `ruoyi-parking`，初始引导在后端提供 `controller`、`service`、`domain` 三个包的结构，开放 `/parking/health` 简易健康检查接口，并在 `ruoyi-ui/src/api/parking/` 与 `ruoyi-ui/src/views/parking/` 下准备前端占位文件。
+
 ## 平台简介
 
 若依是一套全部开源的快速开发平台，毫无保留给个人及企业免费使用。
