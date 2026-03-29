@@ -1,5 +1,7 @@
 package com.ruoyi.parking;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -7,6 +9,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -40,23 +45,8 @@ class ParkingSchemaScriptTest
             assertTableContainsColumns(normalizedSql, entry.getKey(), entry.getValue());
         }
 
-        Pattern lotCountPattern = Pattern.compile(
-            "'No\\. 88 Innovation Road, Shenzhen'\\s*,\\s*3\\s*,\\s*2\\s*,\\s*380\\.00",
-            Pattern.CASE_INSENSITIVE
-        );
-        assertTrue(
-            lotCountPattern.matcher(normalizedSql).find(),
-            () -> "Expected demo lot to report total_space_count=3 and available_space_count=2"
-        );
-
-        Pattern membershipPaymentPattern = Pattern.compile(
-            "insert\\s+into\\s+parking_payment_record[\\s\\S]*?\\(\\s*\\d+\\s*,\\s*'PO202603290001'\\s*,",
-            Pattern.CASE_INSENSITIVE
-        );
-        assertTrue(
-            membershipPaymentPattern.matcher(normalizedSql).find(),
-            () -> "Expected a payment record for PO202603290001 in parking_payment_record"
-        );
+        assertParkingSpaceAndLotSeedInvariants(normalizedSql);
+        assertMembershipPaymentSeedConsistency(normalizedSql);
     }
 
     private Path locateParkingBootstrapScript()
@@ -136,5 +126,201 @@ class ParkingSchemaScriptTest
             Pattern.CASE_INSENSITIVE
         );
         return columnPattern.matcher(columnsBlock).find();
+    }
+
+    private static void assertParkingSpaceAndLotSeedInvariants(String sql)
+    {
+        List<Map<String, String>> seededSpaces = extractInsertedRows(sql, "parking_space");
+        assertEquals(3, seededSpaces.size(), "Expected exactly 3 seeded parking_space rows");
+
+        long freeSpaceCount = seededSpaces.stream().filter(row -> "0".equals(row.get("status"))).count();
+        long occupiedSpaceCount = seededSpaces.stream().filter(row -> "1".equals(row.get("status"))).count();
+        assertEquals(2L, freeSpaceCount, "Expected 2 seeded free spaces (status='0')");
+        assertEquals(1L, occupiedSpaceCount, "Expected 1 seeded occupied space (status='1')");
+
+        List<Map<String, String>> seededLots = extractInsertedRows(sql, "parking_lot");
+        assertTrue(!seededLots.isEmpty(), "Expected seeded parking_lot data");
+        Map<String, String> demoLot = seededLots.get(0);
+        assertEquals("3", demoLot.get("total_space_count"), "Expected parking_lot.total_space_count=3");
+        assertEquals("2", demoLot.get("available_space_count"), "Expected parking_lot.available_space_count=2");
+    }
+
+    private static void assertMembershipPaymentSeedConsistency(String sql)
+    {
+        List<Map<String, String>> paymentRows = extractInsertedRows(sql, "parking_payment_record");
+        Map<String, String> membershipPayment = paymentRows.stream()
+            .filter(row -> "PO202603290001".equals(row.get("biz_order_no")))
+            .findFirst()
+            .orElse(null);
+
+        assertNotNull(
+            membershipPayment,
+            "Expected payment record for membership order PO202603290001 in parking_payment_record"
+        );
+        assertEquals("1", membershipPayment.get("biz_order_type"), "Expected membership payment biz_order_type='1'");
+        assertEquals("1000.00", membershipPayment.get("pay_amount"), "Expected membership payment pay_amount=1000.00");
+        assertEquals("1", membershipPayment.get("pay_status"), "Expected membership payment pay_status='1'");
+    }
+
+    private static List<Map<String, String>> extractInsertedRows(String sql, String tableName)
+    {
+        Pattern insertPattern = Pattern.compile(
+            "insert\\s+into\\s+`?" + Pattern.quote(tableName) + "`?\\s*\\((.*?)\\)\\s*values\\s*(.*?);",
+            Pattern.CASE_INSENSITIVE | Pattern.DOTALL
+        );
+        Matcher matcher = insertPattern.matcher(sql);
+
+        List<Map<String, String>> rows = new ArrayList<>();
+        while (matcher.find())
+        {
+            List<String> columns = parseInsertColumns(matcher.group(1));
+            List<String> tuples = parseSqlTuples(matcher.group(2));
+            for (String tuple : tuples)
+            {
+                List<String> values = splitSqlValues(tuple);
+                assertEquals(
+                    columns.size(),
+                    values.size(),
+                    () -> "Column/value count mismatch in insert for table " + tableName
+                );
+                rows.add(mapRow(columns, values));
+            }
+        }
+        return rows;
+    }
+
+    private static List<String> parseInsertColumns(String columnsBlock)
+    {
+        return Arrays.stream(columnsBlock.split(","))
+            .map(String::trim)
+            .map(ParkingSchemaScriptTest::stripOptionalIdentifierQuotes)
+            .toList();
+    }
+
+    private static List<String> parseSqlTuples(String valuesBlock)
+    {
+        List<String> tuples = new ArrayList<>();
+        int depth = 0;
+        boolean inString = false;
+        int tupleStart = -1;
+
+        for (int i = 0; i < valuesBlock.length(); i++)
+        {
+            char ch = valuesBlock.charAt(i);
+            if (ch == '\'')
+            {
+                if (inString && i + 1 < valuesBlock.length() && valuesBlock.charAt(i + 1) == '\'')
+                {
+                    i++;
+                }
+                else
+                {
+                    inString = !inString;
+                }
+            }
+            if (inString)
+            {
+                continue;
+            }
+
+            if (ch == '(')
+            {
+                if (depth == 0)
+                {
+                    tupleStart = i;
+                }
+                depth++;
+            }
+            else if (ch == ')')
+            {
+                depth--;
+                if (depth == 0 && tupleStart >= 0)
+                {
+                    tuples.add(valuesBlock.substring(tupleStart + 1, i));
+                    tupleStart = -1;
+                }
+            }
+        }
+        return tuples;
+    }
+
+    private static List<String> splitSqlValues(String tupleContent)
+    {
+        List<String> values = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        int nestedDepth = 0;
+        boolean inString = false;
+
+        for (int i = 0; i < tupleContent.length(); i++)
+        {
+            char ch = tupleContent.charAt(i);
+            if (ch == '\'')
+            {
+                current.append(ch);
+                if (inString && i + 1 < tupleContent.length() && tupleContent.charAt(i + 1) == '\'')
+                {
+                    current.append(tupleContent.charAt(i + 1));
+                    i++;
+                }
+                else
+                {
+                    inString = !inString;
+                }
+                continue;
+            }
+
+            if (!inString)
+            {
+                if (ch == '(')
+                {
+                    nestedDepth++;
+                }
+                else if (ch == ')' && nestedDepth > 0)
+                {
+                    nestedDepth--;
+                }
+                else if (ch == ',' && nestedDepth == 0)
+                {
+                    values.add(normalizeSqlLiteral(current.toString()));
+                    current.setLength(0);
+                    continue;
+                }
+            }
+
+            current.append(ch);
+        }
+
+        values.add(normalizeSqlLiteral(current.toString()));
+        return values;
+    }
+
+    private static Map<String, String> mapRow(List<String> columns, List<String> values)
+    {
+        Map<String, String> row = new LinkedHashMap<>();
+        for (int i = 0; i < columns.size(); i++)
+        {
+            row.put(columns.get(i), values.get(i));
+        }
+        return row;
+    }
+
+    private static String normalizeSqlLiteral(String rawValue)
+    {
+        String trimmed = rawValue.trim();
+        if (trimmed.length() >= 2 && trimmed.startsWith("'") && trimmed.endsWith("'"))
+        {
+            return trimmed.substring(1, trimmed.length() - 1).replace("''", "'");
+        }
+        return trimmed;
+    }
+
+    private static String stripOptionalIdentifierQuotes(String identifier)
+    {
+        String trimmed = identifier.trim();
+        if (trimmed.length() >= 2 && trimmed.startsWith("`") && trimmed.endsWith("`"))
+        {
+            return trimmed.substring(1, trimmed.length() - 1);
+        }
+        return trimmed;
     }
 }
