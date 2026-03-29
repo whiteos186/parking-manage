@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -130,23 +131,39 @@ class ParkingSchemaScriptTest
 
     private static void assertParkingSpaceAndLotSeedInvariants(String sql)
     {
-        List<Map<String, String>> seededSpaces = extractInsertedRows(sql, "parking_space");
-        assertEquals(3, seededSpaces.size(), "Expected exactly 3 seeded parking_space rows");
-
-        long freeSpaceCount = seededSpaces.stream().filter(row -> "0".equals(row.get("status"))).count();
-        long occupiedSpaceCount = seededSpaces.stream().filter(row -> "1".equals(row.get("status"))).count();
-        assertEquals(2L, freeSpaceCount, "Expected 2 seeded free spaces (status='0')");
-        assertEquals(1L, occupiedSpaceCount, "Expected 1 seeded occupied space (status='1')");
-
         List<Map<String, String>> seededLots = extractInsertedRows(sql, "parking_lot");
-        assertTrue(!seededLots.isEmpty(), "Expected seeded parking_lot data");
+        assertEquals(1, seededLots.size(), "Expected exactly 1 seeded parking_lot row for minimal dataset");
         Map<String, String> demoLot = seededLots.get(0);
+        String demoLotId = demoLot.get("lot_id");
+        assertNotNull(demoLotId, "Expected seeded parking_lot row to include lot_id");
         assertEquals("3", demoLot.get("total_space_count"), "Expected parking_lot.total_space_count=3");
         assertEquals("2", demoLot.get("available_space_count"), "Expected parking_lot.available_space_count=2");
+
+        List<Map<String, String>> seededSpaces = extractInsertedRows(sql, "parking_space");
+        List<Map<String, String>> demoLotSpaces = seededSpaces.stream()
+            .filter(row -> demoLotId.equals(row.get("lot_id")))
+            .toList();
+
+        assertEquals(3, demoLotSpaces.size(), "Expected 3 seeded parking_space rows for the demo lot");
+
+        long freeSpaceCount = demoLotSpaces.stream().filter(row -> "0".equals(row.get("status"))).count();
+        long occupiedSpaceCount = demoLotSpaces.stream().filter(row -> "1".equals(row.get("status"))).count();
+        assertEquals(2L, freeSpaceCount, "Expected 2 seeded free spaces (status='0') for the demo lot");
+        assertEquals(1L, occupiedSpaceCount, "Expected 1 seeded occupied space (status='1') for the demo lot");
     }
 
     private static void assertMembershipPaymentSeedConsistency(String sql)
     {
+        List<Map<String, String>> membershipRows = extractInsertedRows(sql, "parking_membership_order");
+        Map<String, String> membershipOrder = membershipRows.stream()
+            .filter(row -> "PO202603290001".equals(row.get("order_no")))
+            .findFirst()
+            .orElse(null);
+        assertNotNull(
+            membershipOrder,
+            "Expected membership order PO202603290001 in parking_membership_order"
+        );
+
         List<Map<String, String>> paymentRows = extractInsertedRows(sql, "parking_payment_record");
         Map<String, String> membershipPayment = paymentRows.stream()
             .filter(row -> "PO202603290001".equals(row.get("biz_order_no")))
@@ -157,9 +174,17 @@ class ParkingSchemaScriptTest
             membershipPayment,
             "Expected payment record for membership order PO202603290001 in parking_payment_record"
         );
-        assertEquals("1", membershipPayment.get("biz_order_type"), "Expected membership payment biz_order_type='1'");
-        assertEquals("1000.00", membershipPayment.get("pay_amount"), "Expected membership payment pay_amount=1000.00");
+
+        assertEquals(membershipOrder.get("order_no"), membershipPayment.get("biz_order_no"),
+            "Expected membership order_no to match payment biz_order_no");
+        assertEquals("1", membershipOrder.get("pay_status"), "Expected membership order pay_status='1'");
         assertEquals("1", membershipPayment.get("pay_status"), "Expected membership payment pay_status='1'");
+        assertEquals(
+            parseDecimal(membershipOrder.get("pay_amount")),
+            parseDecimal(membershipPayment.get("pay_amount")),
+            "Expected membership order pay_amount to match payment pay_amount"
+        );
+        assertEquals("1", membershipPayment.get("biz_order_type"), "Expected membership payment biz_order_type='1'");
     }
 
     private static List<Map<String, String>> extractInsertedRows(String sql, String tableName)
@@ -322,5 +347,11 @@ class ParkingSchemaScriptTest
             return trimmed.substring(1, trimmed.length() - 1);
         }
         return trimmed;
+    }
+
+    private static BigDecimal parseDecimal(String numericLiteral)
+    {
+        assertNotNull(numericLiteral, "Expected numeric literal to be non-null");
+        return new BigDecimal(numericLiteral);
     }
 }
