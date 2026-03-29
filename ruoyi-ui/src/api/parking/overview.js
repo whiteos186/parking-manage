@@ -15,6 +15,13 @@ export function listParkingLots(query) {
   })
 }
 
+export function listParkingLotOptions() {
+  return request({
+    url: '/parking/lot/options',
+    method: 'get'
+  })
+}
+
 export function listParkingSpaces(query) {
   return request({
     url: '/parking/space/list',

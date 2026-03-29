@@ -57,6 +57,13 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             (select count(1) from parking_space where del_flag = '0' and status = '3') as locked_space_count
     </select>
 
+    <select id="selectParkingLotOptions" resultMap="ParkingLotResult">
+        select lot_id, lot_name
+        from parking_lot
+        where del_flag = '0'
+        order by lot_name asc, lot_id asc
+    </select>
+
     <select id="selectParkingLotList" parameterType="ParkingLot" resultMap="ParkingLotResult">
         select
             lot_id,

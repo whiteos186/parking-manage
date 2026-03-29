@@ -36,6 +36,12 @@ public class ParkingOverviewServiceImpl implements IParkingOverviewService
     }
 
     @Override
+    public List<ParkingLot> selectParkingLotOptions()
+    {
+        return parkingOverviewMapper.selectParkingLotOptions();
+    }
+
+    @Override
     public List<ParkingLot> selectParkingLotList(ParkingLot parkingLot)
     {
         return parkingOverviewMapper.selectParkingLotList(parkingLot);

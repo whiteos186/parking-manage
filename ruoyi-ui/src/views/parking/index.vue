@@ -181,7 +181,7 @@
 
 <script>
 import { getParkingHealth } from '@/api/parking/health'
-import { getParkingOverviewStats, listParkingLots, listParkingSpaces } from '@/api/parking/overview'
+import { getParkingOverviewStats, listParkingLotOptions, listParkingLots, listParkingSpaces } from '@/api/parking/overview'
 
 export default {
   name: 'ParkingOverview',
@@ -236,12 +236,8 @@ export default {
       })
     },
     getLotOptions() {
-      listParkingLots({
-        pageNum: 1,
-        pageSize: 100,
-        status: '0'
-      }).then(response => {
-        this.lotOptions = response.rows || []
+      listParkingLotOptions().then(response => {
+        this.lotOptions = response.data || []
       })
     },
     getLotList() {

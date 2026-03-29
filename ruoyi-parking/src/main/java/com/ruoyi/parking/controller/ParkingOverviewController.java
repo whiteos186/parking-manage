@@ -30,6 +30,13 @@ public class ParkingOverviewController extends BaseController
     }
 
     @PreAuthorize("@ss.hasPermi('parking:overview:list')")
+    @GetMapping("/lot/options")
+    public AjaxResult lotOptions()
+    {
+        return AjaxResult.success(parkingOverviewService.selectParkingLotOptions());
+    }
+
+    @PreAuthorize("@ss.hasPermi('parking:overview:list')")
     @GetMapping("/lot/list")
     public TableDataInfo lotList(ParkingLot parkingLot)
     {

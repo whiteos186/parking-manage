@@ -9,6 +9,8 @@ public interface IParkingOverviewService
 {
     ParkingOverviewStats selectOverviewStats();
 
+    List<ParkingLot> selectParkingLotOptions();
+
     List<ParkingLot> selectParkingLotList(ParkingLot parkingLot);
 
     List<ParkingSpace> selectParkingSpaceList(ParkingSpace parkingSpace);
