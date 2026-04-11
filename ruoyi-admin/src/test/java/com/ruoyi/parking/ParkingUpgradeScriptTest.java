@@ -87,6 +87,24 @@ class ParkingUpgradeScriptTest
             "Expected 3 information_schema.columns checks — one per member column");
     }
 
+    @Test
+    void upgradeScriptSeedsParkingGlobalConfigAndDictData() throws IOException
+    {
+        Path scriptPath = locateUpgradeScript();
+        String sql = Files.readString(scriptPath, StandardCharsets.UTF_8).toLowerCase();
+
+        assertTrue(sql.contains("parking.rule.monthlyprice"),
+            "Expected global config seed for parking.rule.monthlyPrice");
+        assertTrue(sql.contains("parking.rule.temphourprice"),
+            "Expected global config seed for parking.rule.tempHourPrice");
+        assertTrue(sql.contains("parking.rule.memberdiscount.gold"),
+            "Expected global config seed for parking.rule.memberDiscount.gold");
+        assertTrue(sql.contains("parking_payment_channel"),
+            "Expected dict seed for parking_payment_channel");
+        assertTrue(sql.contains("parking_lot_status"),
+            "Expected dict seed for parking_lot_status");
+    }
+
     // ---- helpers ----
 
     private void assertIdempotentAlterPresent(String sql, String columnName)

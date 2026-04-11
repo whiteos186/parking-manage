@@ -49,9 +49,10 @@ class ParkingMenuScriptTest
         assertTrue(normalizedSql.contains("@parking_customer_id"), "Expected SQL variable @parking_customer_id");
         assertTrue(normalizedSql.contains("@parking_vehicle_id"), "Expected SQL variable @parking_vehicle_id");
         assertTrue(normalizedSql.contains("@parking_lotadmin_id"), "Expected SQL variable @parking_lotadmin_id");
+        assertTrue(normalizedSql.contains("@parking_settings_id"), "Expected SQL variable @parking_settings_id");
 
         List<MenuInsertSpec> inserts = extractInsertIfNotExistsSpecs(normalizedSql);
-        assertEquals(63, inserts.size(), "Expected 63 insert-if-not-exists blocks");
+        assertEquals(66, inserts.size(), "Expected 66 insert-if-not-exists blocks");
 
         MenuInsertSpec workbenchPage = findInsertByComponent(inserts, "'parking/index'");
         assertNotNull(workbenchPage, "Expected workbench row backed by parking overview page");
@@ -221,6 +222,13 @@ class ParkingMenuScriptTest
         assertFunctionButton(inserts, "'parking:lotadmin:add'", "@parking_lotadmin_id");
         assertFunctionButton(inserts, "'parking:lotadmin:edit'", "@parking_lotadmin_id");
         assertFunctionButton(inserts, "'parking:lotadmin:remove'", "@parking_lotadmin_id");
+
+        MenuInsertSpec settingsPage = findInsertByComponent(inserts, "'parking/settings/index'");
+        assertNotNull(settingsPage, "Expected parking settings page row");
+        assertEquals("@parking_archive_root_id", settingsPage.valuesByColumn().get("parent_id"));
+        assertEquals("'parking:settings:list'", settingsPage.valuesByColumn().get("perms"));
+        assertFunctionButton(inserts, "'parking:settings:query'", "@parking_settings_id");
+        assertFunctionButton(inserts, "'parking:settings:edit'", "@parking_settings_id");
     }
 
     private static void assertFunctionButton(List<MenuInsertSpec> inserts, String permsToken, String expectedParentToken)

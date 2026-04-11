@@ -2351,3 +2351,119 @@ set menu_name = '管理员删除',
     remark = 'Parking lot admin remove permission'
 where perms = 'parking:lotadmin:remove'
   and menu_type = 'F';
+
+-- ----------------------------
+-- Parking settings
+-- ----------------------------
+
+insert into sys_menu (
+  menu_name, parent_id, order_num, path, component, query, route_name,
+  is_frame, is_cache, menu_type, visible, status, perms, icon,
+  create_by, create_time, update_by, update_time, remark
+)
+select
+  '停车设置', @parking_archive_root_id, 4, 'settings', 'parking/settings/index', '', '',
+  1, 0, 'C', '0', '0', 'parking:settings:list', 'setting',
+  'admin', sysdate(), '', null, 'Parking global settings page'
+from dual
+where not exists (
+  select 1 from sys_menu where component = 'parking/settings/index' and menu_type = 'C'
+);
+
+set @parking_settings_id := (
+  select menu_id
+  from sys_menu
+  where component = 'parking/settings/index' and menu_type = 'C'
+  order by menu_id
+  limit 1
+);
+
+update sys_menu
+set menu_name = '停车设置',
+    parent_id = @parking_archive_root_id,
+    order_num = 4,
+    path = 'settings',
+    component = 'parking/settings/index',
+    query = '',
+    route_name = '',
+    is_frame = 1,
+    is_cache = 0,
+    menu_type = 'C',
+    visible = '0',
+    status = '0',
+    perms = 'parking:settings:list',
+    icon = 'setting',
+    update_by = 'admin',
+    update_time = sysdate(),
+    remark = 'Parking global settings page'
+where menu_id = @parking_settings_id;
+
+insert into sys_menu (
+  menu_name, parent_id, order_num, path, component, query, route_name,
+  is_frame, is_cache, menu_type, visible, status, perms, icon,
+  create_by, create_time, update_by, update_time, remark
+)
+select
+  '停车设置查询', @parking_settings_id, 1, '', '', '', '',
+  1, 0, 'F', '0', '0', 'parking:settings:query', '#',
+  'admin', sysdate(), '', null, 'Parking settings query permission'
+from dual
+where not exists (
+  select 1 from sys_menu where perms = 'parking:settings:query' and menu_type = 'F'
+);
+
+update sys_menu
+set menu_name = '停车设置查询',
+    parent_id = @parking_settings_id,
+    order_num = 1,
+    path = '',
+    component = '',
+    query = '',
+    route_name = '',
+    is_frame = 1,
+    is_cache = 0,
+    menu_type = 'F',
+    visible = '0',
+    status = '0',
+    perms = 'parking:settings:query',
+    icon = '#',
+    update_by = 'admin',
+    update_time = sysdate(),
+    remark = 'Parking settings query permission'
+where perms = 'parking:settings:query'
+  and menu_type = 'F';
+
+insert into sys_menu (
+  menu_name, parent_id, order_num, path, component, query, route_name,
+  is_frame, is_cache, menu_type, visible, status, perms, icon,
+  create_by, create_time, update_by, update_time, remark
+)
+select
+  '停车设置修改', @parking_settings_id, 2, '', '', '', '',
+  1, 0, 'F', '0', '0', 'parking:settings:edit', '#',
+  'admin', sysdate(), '', null, 'Parking settings edit permission'
+from dual
+where not exists (
+  select 1 from sys_menu where perms = 'parking:settings:edit' and menu_type = 'F'
+);
+
+update sys_menu
+set menu_name = '停车设置修改',
+    parent_id = @parking_settings_id,
+    order_num = 2,
+    path = '',
+    component = '',
+    query = '',
+    route_name = '',
+    is_frame = 1,
+    is_cache = 0,
+    menu_type = 'F',
+    visible = '0',
+    status = '0',
+    perms = 'parking:settings:edit',
+    icon = '#',
+    update_by = 'admin',
+    update_time = sysdate(),
+    remark = 'Parking settings edit permission'
+where perms = 'parking:settings:edit'
+  and menu_type = 'F';
