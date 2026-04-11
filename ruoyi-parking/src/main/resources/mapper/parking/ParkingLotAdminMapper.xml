@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.parking.mapper.ParkingLotAdminMapper">
+
+    <resultMap type="ParkingLotAdmin" id="ParkingLotAdminResult">
+        <id property="lotAdminId" column="lot_admin_id"/>
+        <result property="lotId" column="lot_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="status" column="status"/>
+        <result property="lotName" column="lot_name"/>
+        <result property="userName" column="user_name"/>
+        <result property="nickName" column="nick_name"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <sql id="selectParkingLotAdminColumns">
+        select
+            a.lot_admin_id,
+            a.lot_id,
+            a.user_id,
+            a.status,
+            l.lot_name,
+            u.user_name,
+            u.nick_name,
+            a.create_by,
+            a.create_time,
+            a.update_by,
+            a.update_time,
+            a.remark
+        from parking_lot_admin a
+        left join parking_lot l on l.lot_id = a.lot_id and l.del_flag = '0'
+        left join sys_user u on u.user_id = a.user_id and u.del_flag = '0'
+    </sql>
+
+    <select id="selectParkingLotAdminById" parameterType="Long" resultMap="ParkingLotAdminResult">
+        <include refid="selectParkingLotAdminColumns"/>
+        where a.lot_admin_id = #{lotAdminId}
+    </select>
+
+    <select id="selectParkingLotAdminList" parameterType="ParkingLotAdmin" resultMap="ParkingLotAdminResult">
+        <include refid="selectParkingLotAdminColumns"/>
+        <where>
+            <if test="lotId != null">
+                and a.lot_id = #{lotId}
+            </if>
+            <if test="userId != null">
+                and a.user_id = #{userId}
+            </if>
+            <if test="status != null and status != ''">
+                and a.status = #{status}
+            </if>
+        </where>
+        order by a.lot_admin_id desc
+    </select>
+
+    <select id="selectParkingLotAdminByLotIdAndUserId" resultMap="ParkingLotAdminResult">
+        <include refid="selectParkingLotAdminColumns"/>
+        where a.lot_id = #{lotId}
+          and a.user_id = #{userId}
+        limit 1
+    </select>
+
+    <insert id="insertParkingLotAdmin" parameterType="ParkingLotAdmin" useGeneratedKeys="true" keyProperty="lotAdminId">
+        insert into parking_lot_admin (
+            lot_id,
+            user_id,
+            status,
+            create_by,
+            create_time,
+            remark
+        ) values (
+            #{lotId},
+            #{userId},
+            #{status},
+            #{createBy},
+            sysdate(),
+            #{remark}
+        )
+    </insert>
+
+    <update id="updateParkingLotAdmin" parameterType="ParkingLotAdmin">
+        update parking_lot_admin
+        <set>
+            <if test="lotId != null">lot_id = #{lotId},</if>
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="status != null and status != ''">status = #{status},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </set>
+        where lot_admin_id = #{lotAdminId}
+    </update>
+
+    <delete id="deleteParkingLotAdminByIds">
+        delete from parking_lot_admin
+        where lot_admin_id in
+        <foreach collection="lotAdminIds" item="lotAdminId" open="(" separator="," close=")">
+            #{lotAdminId}
+        </foreach>
+    </delete>
+
+    <select id="selectLotIdsByUserId" resultType="java.lang.Long">
+        select lot_id
+        from parking_lot_admin
+        where user_id = #{userId}
+          and status = '0'
+    </select>
+
+    <select id="selectUserOptions" resultType="java.util.Map">
+        select user_id  as userId,
+               user_name as userName,
+               nick_name as nickName
+        from sys_user
+        where del_flag = '0'
+          and status = '0'
+        order by user_id asc
+    </select>
+
+</mapper>

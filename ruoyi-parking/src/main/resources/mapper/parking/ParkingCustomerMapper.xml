@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.parking.mapper.ParkingCustomerMapper">
+
+    <resultMap type="ParkingCustomer" id="ParkingCustomerResult">
+        <id property="customerId" column="customer_id"/>
+        <result property="customerCode" column="customer_code"/>
+        <result property="customerName" column="customer_name"/>
+        <result property="mobile" column="mobile"/>
+        <result property="customerType" column="customer_type"/>
+        <result property="isMember" column="is_member"/>
+        <result property="memberType" column="member_type"/>
+        <result property="memberExpireTime" column="member_expire_time"/>
+        <result property="status" column="status"/>
+        <result property="delFlag" column="del_flag"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <sql id="selectParkingCustomerColumns">
+        select
+            customer_id,
+            customer_code,
+            customer_name,
+            mobile,
+            customer_type,
+            is_member,
+            member_type,
+            member_expire_time,
+            status,
+            del_flag,
+            create_by,
+            create_time,
+            update_by,
+            update_time,
+            remark
+        from parking_customer
+    </sql>
+
+    <select id="selectParkingCustomerById" parameterType="Long" resultMap="ParkingCustomerResult">
+        <include refid="selectParkingCustomerColumns"/>
+        where customer_id = #{customerId}
+          and del_flag = '0'
+    </select>
+
+    <select id="selectParkingCustomerByCode" resultMap="ParkingCustomerResult">
+        <include refid="selectParkingCustomerColumns"/>
+        where customer_code = #{customerCode}
+          and del_flag = '0'
+        limit 1
+    </select>
+
+    <select id="selectParkingCustomerList" parameterType="ParkingCustomer" resultMap="ParkingCustomerResult">
+        <include refid="selectParkingCustomerColumns"/>
+        where del_flag = '0'
+        <if test="customerCode != null and customerCode != ''">
+            and customer_code like concat('%', #{customerCode}, '%')
+        </if>
+        <if test="customerName != null and customerName != ''">
+            and customer_name like concat('%', #{customerName}, '%')
+        </if>
+        <if test="mobile != null and mobile != ''">
+            and mobile like concat('%', #{mobile}, '%')
+        </if>
+        <if test="customerType != null and customerType != ''">
+            and customer_type = #{customerType}
+        </if>
+        <if test="status != null and status != ''">
+            and status = #{status}
+        </if>
+        order by customer_id desc
+    </select>
+
+    <select id="selectParkingCustomerOptions" resultMap="ParkingCustomerResult">
+        select customer_id, customer_code, customer_name, mobile, customer_type, status
+        from parking_customer
+        where del_flag = '0'
+          and status = '0'
+        order by customer_id desc
+    </select>
+
+    <insert id="insertParkingCustomer" parameterType="ParkingCustomer" useGeneratedKeys="true" keyProperty="customerId">
+        insert into parking_customer (
+            customer_code,
+            customer_name,
+            mobile,
+            customer_type,
+            is_member,
+            member_type,
+            member_expire_time,
+            status,
+            del_flag,
+            create_by,
+            create_time,
+            remark
+        ) values (
+            #{customerCode},
+            #{customerName},
+            #{mobile},
+            #{customerType},
+            #{isMember},
+            #{memberType},
+            #{memberExpireTime},
+            #{status},
+            '0',
+            #{createBy},
+            sysdate(),
+            #{remark}
+        )
+    </insert>
+
+    <update id="updateParkingCustomer" parameterType="ParkingCustomer">
+        update parking_customer
+        <set>
+            <if test="customerCode != null and customerCode != ''">customer_code = #{customerCode},</if>
+            <if test="customerName != null and customerName != ''">customer_name = #{customerName},</if>
+            <if test="mobile != null and mobile != ''">mobile = #{mobile},</if>
+            <if test="customerType != null and customerType != ''">customer_type = #{customerType},</if>
+            <if test="isMember != null and isMember != ''">is_member = #{isMember},</if>
+            <if test="memberType != null">member_type = #{memberType},</if>
+            <if test="memberExpireTime != null">member_expire_time = #{memberExpireTime},</if>
+            <if test="status != null and status != ''">status = #{status},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </set>
+        where customer_id = #{customerId}
+          and del_flag = '0'
+    </update>
+
+    <update id="deleteParkingCustomerByIds">
+        update parking_customer
+        set del_flag = '2',
+            update_time = sysdate()
+        where del_flag = '0'
+          and customer_id in
+        <foreach collection="customerIds" item="customerId" open="(" separator="," close=")">
+            #{customerId}
+        </foreach>
+    </update>
+
+</mapper>

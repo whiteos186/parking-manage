@@ -9,7 +9,7 @@ import Layout from '@/layout'
 /**
  * Note: 路由配置项
  *
- * hidden: true                     // 当设置 true 的时候该路由不会再侧边栏出现 如401，login等页面，或者如一些编辑页面/edit/1
+ * hidden: true                     // 当你设置 true 的时候该路由不会在侧边栏出现 如401，login等页面，或者如一些编辑页面/edit/1
  * alwaysShow: true                 // 当你一个路由下面的 children 声明的路由大于1个时，自动会变成嵌套的模式--如组件页面
  *                                  // 只有一个时，会将那个子路由当做根路由显示在侧边栏--如引导页面
  *                                  // 若你想不管路由下面的 children 声明的个数都显示你的根路由
@@ -47,11 +47,6 @@ export const constantRoutes = [
     hidden: true
   },
   {
-    path: '/register',
-    component: () => import('@/views/register'),
-    hidden: true
-  },
-  {
     path: '/404',
     component: () => import('@/views/error/404'),
     hidden: true
@@ -62,17 +57,10 @@ export const constantRoutes = [
     hidden: true
   },
   {
-    path: '',
+    path: '/',
     component: Layout,
-    redirect: 'index',
-    children: [
-      {
-        path: 'index',
-        component: () => import('@/views/index'),
-        name: 'Index',
-        meta: { title: '首页', icon: 'dashboard', affix: true }
-      }
-    ]
+    hidden: true,
+    redirect: '/parking'
   },
   {
     path: '/lock',
@@ -141,20 +129,6 @@ export const dynamicRoutes = [
     ]
   },
   {
-    path: '/monitor/job-log',
-    component: Layout,
-    hidden: true,
-    permissions: ['monitor:job:list'],
-    children: [
-      {
-        path: 'index/:jobId(\\d+)',
-        component: () => import('@/views/monitor/job/log'),
-        name: 'JobLog',
-        meta: { title: '调度日志', activeMenu: '/monitor/job' }
-      }
-    ]
-  },
-  {
     path: '/tool/gen-edit',
     component: Layout,
     hidden: true,
@@ -165,6 +139,62 @@ export const dynamicRoutes = [
         component: () => import('@/views/tool/gen/editTable'),
         name: 'GenEdit',
         meta: { title: '修改生成配置', activeMenu: '/tool/gen' }
+      }
+    ]
+  },
+  {
+    path: '/parking/membership',
+    component: Layout,
+    hidden: true,
+    permissions: ['parking:membership:add', 'parking:membership:edit'],
+    children: [
+      {
+        path: 'form',
+        component: () => import('@/views/parking/membership/form'),
+        name: 'MembershipOrderForm',
+        meta: { title: '会员订单', activeMenu: '/parking/membership' }
+      }
+    ]
+  },
+  {
+    path: '/parking/monthly',
+    component: Layout,
+    hidden: true,
+    permissions: ['parking:monthly:add', 'parking:monthly:edit'],
+    children: [
+      {
+        path: 'form',
+        component: () => import('@/views/parking/monthly/form'),
+        name: 'MonthlyOrderForm',
+        meta: { title: '月卡订单', activeMenu: '/parking/monthly' }
+      }
+    ]
+  },
+  {
+    path: '/parking/payment',
+    component: Layout,
+    hidden: true,
+    permissions: ['parking:payment:add', 'parking:payment:edit'],
+    children: [
+      {
+        path: 'form',
+        component: () => import('@/views/parking/payment/form'),
+        name: 'PaymentForm',
+        meta: { title: '支付流水', activeMenu: '/parking/payment' }
+      }
+    ]
+  },
+  {
+    path: '/parking/temp',
+    component: Layout,
+    hidden: true,
+    permissions: ['parking:temp:add', 'parking:temp:edit'],
+    children: [
+      {
+        path: 'form',
+        component: () => import('@/views/parking/temp/form'),
+        name: 'TempOrderForm',
+        meta: { title: '临停订单', activeMenu: '/parking/temp' }
       }
     ]
   }

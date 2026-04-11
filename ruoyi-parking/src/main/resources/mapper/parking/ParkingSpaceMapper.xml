@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.parking.mapper.ParkingSpaceMapper">
+
+    <resultMap type="ParkingSpace" id="ParkingSpaceResult">
+        <id property="spaceId" column="space_id"/>
+        <result property="lotId" column="lot_id"/>
+        <result property="lotName" column="lot_name"/>
+        <result property="spaceCode" column="space_code"/>
+        <result property="areaName" column="area_name"/>
+        <result property="floorNo" column="floor_no"/>
+        <result property="spaceType" column="space_type"/>
+        <result property="status" column="status"/>
+        <result property="delFlag" column="del_flag"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <sql id="selectParkingSpaceColumns">
+        select
+            s.space_id,
+            s.lot_id,
+            l.lot_name,
+            s.space_code,
+            s.area_name,
+            s.floor_no,
+            s.space_type,
+            s.status,
+            s.del_flag,
+            s.create_by,
+            s.create_time,
+            s.update_by,
+            s.update_time,
+            s.remark
+        from parking_space s
+        left join parking_lot l on l.lot_id = s.lot_id and l.del_flag = '0'
+    </sql>
+
+    <select id="selectParkingSpaceById" parameterType="Long" resultMap="ParkingSpaceResult">
+        <include refid="selectParkingSpaceColumns"/>
+        where s.space_id = #{spaceId}
+          and s.del_flag = '0'
+    </select>
+
+    <select id="selectParkingSpaceList" parameterType="ParkingSpace" resultMap="ParkingSpaceResult">
+        <include refid="selectParkingSpaceColumns"/>
+        where s.del_flag = '0'
+        <if test="lotId != null">
+            and s.lot_id = #{lotId}
+        </if>
+        <if test="spaceCode != null and spaceCode != ''">
+            and s.space_code like concat('%', #{spaceCode}, '%')
+        </if>
+        <if test="status != null and status != ''">
+            and s.status = #{status}
+        </if>
+        order by s.space_id desc
+    </select>
+
+    <select id="selectParkingSpaceByLotIdAndSpaceCode" resultMap="ParkingSpaceResult">
+        <include refid="selectParkingSpaceColumns"/>
+        where s.del_flag = '0'
+          and s.lot_id = #{lotId}
+          and s.space_code = #{spaceCode}
+        limit 1
+    </select>
+
+    <select id="selectParkingSpaceByIds" resultMap="ParkingSpaceResult">
+        <include refid="selectParkingSpaceColumns"/>
+        where s.del_flag = '0'
+          and s.space_id in
+        <foreach collection="spaceIds" item="spaceId" open="(" separator="," close=")">
+            #{spaceId}
+        </foreach>
+    </select>
+
+    <insert id="insertParkingSpace" parameterType="ParkingSpace" useGeneratedKeys="true" keyProperty="spaceId">
+        insert into parking_space (
+            lot_id,
+            space_code,
+            area_name,
+            floor_no,
+            space_type,
+            status,
+            del_flag,
+            create_by,
+            create_time,
+            remark
+        ) values (
+            #{lotId},
+            #{spaceCode},
+            #{areaName},
+            #{floorNo},
+            #{spaceType},
+            #{status},
+            '0',
+            #{createBy},
+            sysdate(),
+            #{remark}
+        )
+    </insert>
+
+    <update id="updateParkingSpace" parameterType="ParkingSpace">
+        update parking_space
+        <set>
+            <if test="lotId != null">lot_id = #{lotId},</if>
+            <if test="spaceCode != null">space_code = #{spaceCode},</if>
+            <if test="areaName != null">area_name = #{areaName},</if>
+            <if test="floorNo != null">floor_no = #{floorNo},</if>
+            <if test="spaceType != null and spaceType != ''">space_type = #{spaceType},</if>
+            <if test="status != null and status != ''">status = #{status},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </set>
+        where space_id = #{spaceId}
+          and del_flag = '0'
+    </update>
+
+    <update id="deleteParkingSpaceByIds">
+        update parking_space
+        set del_flag = '2',
+            update_time = sysdate()
+        where del_flag = '0'
+          and space_id in
+        <foreach collection="spaceIds" item="spaceId" open="(" separator="," close=")">
+            #{spaceId}
+        </foreach>
+    </update>
+
+    <select id="countParkingSpaceByLotIds" resultType="int">
+        select count(1)
+        from parking_space
+        where del_flag = '0'
+          and lot_id in
+        <foreach collection="lotIds" item="lotId" open="(" separator="," close=")">
+            #{lotId}
+        </foreach>
+    </select>
+
+    <select id="countParkingSpaceByLotId" resultType="int">
+        select count(1)
+        from parking_space
+        where del_flag = '0'
+          and lot_id = #{lotId}
+    </select>
+
+    <select id="countAvailableParkingSpaceByLotId" resultType="int">
+        select count(1)
+        from parking_space
+        where del_flag = '0'
+          and lot_id = #{lotId}
+          and status = '0'
+    </select>
+
+</mapper>

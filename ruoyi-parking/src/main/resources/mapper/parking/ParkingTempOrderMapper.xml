@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.parking.mapper.ParkingTempOrderMapper">
+
+    <resultMap type="ParkingTempOrder" id="ParkingTempOrderResult">
+        <id property="tempOrderId" column="temp_order_id"/>
+        <result property="orderNo" column="order_no"/>
+        <result property="lotId" column="lot_id"/>
+        <result property="spaceId" column="space_id"/>
+        <result property="customerId" column="customer_id"/>
+        <result property="vehiclePlateNo" column="vehicle_plate_no"/>
+        <result property="inTime" column="in_time"/>
+        <result property="outTime" column="out_time"/>
+        <result property="parkingDurationMin" column="parking_duration_min"/>
+        <result property="feeAmount" column="fee_amount"/>
+        <result property="discountAmount" column="discount_amount"/>
+        <result property="payAmount" column="pay_amount"/>
+        <result property="payStatus" column="pay_status"/>
+        <result property="bizStatus" column="biz_status"/>
+        <result property="payTime" column="pay_time"/>
+        <result property="closeTime" column="close_time"/>
+        <result property="delFlag" column="del_flag"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+        <result property="lotName" column="lot_name"/>
+    </resultMap>
+
+    <sql id="selectParkingTempOrderColumns">
+        select
+            t.temp_order_id,
+            t.order_no,
+            t.lot_id,
+            t.space_id,
+            t.customer_id,
+            t.vehicle_plate_no,
+            t.in_time,
+            t.out_time,
+            t.parking_duration_min,
+            t.fee_amount,
+            t.discount_amount,
+            t.pay_amount,
+            t.pay_status,
+            t.biz_status,
+            t.pay_time,
+            t.close_time,
+            t.del_flag,
+            t.create_by,
+            t.create_time,
+            t.update_by,
+            t.update_time,
+            t.remark,
+            l.lot_name
+        from parking_temp_order t
+        left join parking_lot l on l.lot_id = t.lot_id and l.del_flag = '0'
+    </sql>
+
+    <select id="selectParkingTempOrderById" parameterType="Long" resultMap="ParkingTempOrderResult">
+        <include refid="selectParkingTempOrderColumns"/>
+        where t.temp_order_id = #{tempOrderId}
+          and t.del_flag = '0'
+    </select>
+
+    <select id="selectParkingTempOrderList" parameterType="ParkingTempOrder" resultMap="ParkingTempOrderResult">
+        <include refid="selectParkingTempOrderColumns"/>
+        where t.del_flag = '0'
+        <if test="lotId != null">
+            and t.lot_id = #{lotId}
+        </if>
+        <if test="vehiclePlateNo != null and vehiclePlateNo != ''">
+            and t.vehicle_plate_no like concat('%', #{vehiclePlateNo}, '%')
+        </if>
+        <if test="payStatus != null and payStatus != ''">
+            and t.pay_status = #{payStatus}
+        </if>
+        <if test="bizStatus != null and bizStatus != ''">
+            and t.biz_status = #{bizStatus}
+        </if>
+        <if test="inTimeStart != null and inTimeStart != ''">
+            and t.in_time &gt;= #{inTimeStart}
+        </if>
+        <if test="inTimeEnd != null and inTimeEnd != ''">
+            and t.in_time &lt;= #{inTimeEnd}
+        </if>
+        order by t.temp_order_id desc
+    </select>
+
+    <select id="selectParkingTempOrderByIds" resultMap="ParkingTempOrderResult">
+        <include refid="selectParkingTempOrderColumns"/>
+        where t.del_flag = '0'
+          and t.temp_order_id in
+        <foreach collection="tempOrderIds" item="tempOrderId" open="(" separator="," close=")">
+            #{tempOrderId}
+        </foreach>
+    </select>
+
+    <insert id="insertParkingTempOrder" parameterType="ParkingTempOrder" useGeneratedKeys="true" keyProperty="tempOrderId">
+        insert into parking_temp_order (
+            order_no,
+            lot_id,
+            space_id,
+            customer_id,
+            vehicle_plate_no,
+            in_time,
+            out_time,
+            parking_duration_min,
+            fee_amount,
+            discount_amount,
+            pay_amount,
+            pay_status,
+            biz_status,
+            pay_time,
+            close_time,
+            del_flag,
+            create_by,
+            create_time,
+            remark
+        ) values (
+            #{orderNo},
+            #{lotId},
+            #{spaceId},
+            #{customerId},
+            #{vehiclePlateNo},
+            #{inTime},
+            #{outTime},
+            #{parkingDurationMin},
+            #{feeAmount},
+            #{discountAmount},
+            #{payAmount},
+            #{payStatus},
+            #{bizStatus},
+            #{payTime},
+            #{closeTime},
+            '0',
+            #{createBy},
+            sysdate(),
+            #{remark}
+        )
+    </insert>
+
+    <update id="updateParkingTempOrder" parameterType="ParkingTempOrder">
+        update parking_temp_order
+        <set>
+            <if test="orderNo != null and orderNo != ''">order_no = #{orderNo},</if>
+            <if test="lotId != null">lot_id = #{lotId},</if>
+            <if test="spaceId != null">space_id = #{spaceId},</if>
+            <if test="customerId != null">customer_id = #{customerId},</if>
+            <if test="vehiclePlateNo != null and vehiclePlateNo != ''">vehicle_plate_no = #{vehiclePlateNo},</if>
+            <if test="inTime != null">in_time = #{inTime},</if>
+            <if test="outTime != null">out_time = #{outTime},</if>
+            <if test="parkingDurationMin != null">parking_duration_min = #{parkingDurationMin},</if>
+            <if test="feeAmount != null">fee_amount = #{feeAmount},</if>
+            <if test="discountAmount != null">discount_amount = #{discountAmount},</if>
+            <if test="payAmount != null">pay_amount = #{payAmount},</if>
+            <if test="payStatus != null and payStatus != ''">pay_status = #{payStatus},</if>
+            <if test="bizStatus != null and bizStatus != ''">biz_status = #{bizStatus},</if>
+            <if test="payTime != null">pay_time = #{payTime},</if>
+            <if test="closeTime != null">close_time = #{closeTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </set>
+        where temp_order_id = #{tempOrderId}
+          and del_flag = '0'
+    </update>
+
+    <update id="deleteParkingTempOrderByIds">
+        update parking_temp_order
+        set del_flag = '2',
+            update_time = sysdate()
+        where del_flag = '0'
+          and temp_order_id in
+        <foreach collection="tempOrderIds" item="tempOrderId" open="(" separator="," close=")">
+            #{tempOrderId}
+        </foreach>
+    </update>
+
+</mapper>

@@ -1,0 +1,52 @@
+name: parking-mvp
+
+services:
+  mysql:
+    # Custom image based on mysql:8.0.33 that bakes a /etc/mysql/conf.d/client-utf8.cnf
+    # into the image so the file permissions are mysql-acceptable (Windows bind mounts
+    # default to world-writable, which makes mysql silently ignore the file).
+    build:
+      context: ./docker/mysql
+      dockerfile: Dockerfile
+    image: parking-mvp/mysql:8.0.33-utf8
+    container_name: parking-mvp-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: ry_vue
+      TZ: Asia/Shanghai
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_general_ci
+      - --explicit_defaults_for_timestamp=true
+      - --lower_case_table_names=1
+    ports:
+      - "13306:3306"
+    volumes:
+      - parking_mysql_data:/var/lib/mysql
+      - ./sql/ry_20260320.sql:/docker-entrypoint-initdb.d/01-ry-base.sql:ro
+      - ./sql/quartz.sql:/docker-entrypoint-initdb.d/02-quartz.sql:ro
+      - ./sql/parking/parking_bootstrap.sql:/docker-entrypoint-initdb.d/03-parking-bootstrap.sql:ro
+      - ./sql/parking/parking_menu.sql:/docker-entrypoint-initdb.d/04-parking-menu.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-p123456"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: docker.m.daocloud.io/library/redis:6-alpine
+    container_name: parking-mvp-redis
+    restart: unless-stopped
+    command: ["redis-server"]
+    ports:
+      - "16379:6379"
+    volumes:
+      - parking_redis_data:/data
+
+volumes:
+  parking_mysql_data:
+    name: parking-mvp_ry_vue_mysql_data
+  parking_redis_data:
+    name: parking-mvp_parking_redis_data

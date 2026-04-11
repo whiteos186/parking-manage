@@ -2,19 +2,19 @@ package com.ruoyi.parking.controller;
 
 import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
-import com.ruoyi.common.core.page.TableDataInfo;
-import com.ruoyi.parking.domain.ParkingLot;
-import com.ruoyi.parking.domain.ParkingSpace;
 import com.ruoyi.parking.service.IParkingOverviewService;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/parking")
 public class ParkingOverviewController extends BaseController
 {
+    private static final int RECENT_ORDERS_MAX_LIMIT = 50;
+
     private final IParkingOverviewService parkingOverviewService;
 
     public ParkingOverviewController(IParkingOverviewService parkingOverviewService)
@@ -30,25 +30,10 @@ public class ParkingOverviewController extends BaseController
     }
 
     @PreAuthorize("@ss.hasPermi('parking:overview:list')")
-    @GetMapping("/lot/options")
-    public AjaxResult lotOptions()
+    @GetMapping("/overview/recent-orders")
+    public AjaxResult recentOrders(@RequestParam(name = "limit", defaultValue = "5") int limit)
     {
-        return AjaxResult.success(parkingOverviewService.selectParkingLotOptions());
-    }
-
-    @PreAuthorize("@ss.hasPermi('parking:overview:list')")
-    @GetMapping("/lot/list")
-    public TableDataInfo lotList(ParkingLot parkingLot)
-    {
-        startPage();
-        return getDataTable(parkingOverviewService.selectParkingLotList(parkingLot));
-    }
-
-    @PreAuthorize("@ss.hasPermi('parking:overview:list')")
-    @GetMapping("/space/list")
-    public TableDataInfo spaceList(ParkingSpace parkingSpace)
-    {
-        startPage();
-        return getDataTable(parkingOverviewService.selectParkingSpaceList(parkingSpace));
+        int sanitized = Math.max(1, Math.min(limit, RECENT_ORDERS_MAX_LIMIT));
+        return AjaxResult.success(parkingOverviewService.selectRecentOrders(sanitized));
     }
 }

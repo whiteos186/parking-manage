@@ -45,9 +45,9 @@ export default {
       } else {
         matched = router.matched.filter(item => item.meta && item.meta.title)
       }
-      // 判断是否为首页
+      // Keep the parking workbench as the synthetic root for business pages.
       if (!this.isDashboard(matched[0])) {
-        matched = [{ path: "/index", meta: { title: "首页" } }].concat(matched)
+        matched = [{ path: "/parking", meta: { title: "工作台" } }].concat(matched)
       }
       this.levelList = matched.filter(item => item.meta && item.meta.title && item.meta.breadcrumb !== false)
     },
@@ -72,10 +72,18 @@ export default {
     },
     isDashboard(route) {
       const name = route && route.name
-      if (!name) {
+      const path = route && route.path
+      const title = route && route.meta && route.meta.title
+      if (name && name.trim() === 'Index') {
+        return true
+      }
+      if (title && title.trim() === '工作台') {
+        return true
+      }
+      if (!path) {
         return false
       }
-      return name.trim() === 'Index'
+      return path.replace(/^\/+/, '').trim() === 'parking'
     },
     handleLink(item) {
       const { redirect, path } = item

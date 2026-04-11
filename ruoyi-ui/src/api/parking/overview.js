@@ -7,25 +7,10 @@ export function getParkingOverviewStats() {
   })
 }
 
-export function listParkingLots(query) {
+export function getParkingRecentOrders(limit = 5) {
   return request({
-    url: '/parking/lot/list',
+    url: '/parking/overview/recent-orders',
     method: 'get',
-    params: query
-  })
-}
-
-export function listParkingLotOptions() {
-  return request({
-    url: '/parking/lot/options',
-    method: 'get'
-  })
-}
-
-export function listParkingSpaces(query) {
-  return request({
-    url: '/parking/space/list',
-    method: 'get',
-    params: query
+    params: { limit }
   })
 }

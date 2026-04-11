@@ -1,9 +1,9 @@
 package com.ruoyi.parking;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 class ParkingMenuScriptTest
 {
     @Test
-    void parkingMenuScriptUsesBusinessKeyUpsertStrategyWithExactRows() throws IOException
+    void parkingMenuScriptUsesBusinessKeyUpsertAndContainsPlatformNavigationGroups() throws IOException
     {
         Path scriptPath = locateParkingMenuScript();
         assertTrue(Files.exists(scriptPath), () -> "Missing parking menu script: " + scriptPath);
@@ -36,62 +36,203 @@ class ParkingMenuScriptTest
             "Menu bootstrap must not delete sys_menu rows by fixed menu_id"
         );
 
-        assertTrue(normalizedSql.contains("@parking_root_id"), "Expected SQL variable @parking_root_id");
-        assertTrue(normalizedSql.contains("@parking_overview_id"), "Expected SQL variable @parking_overview_id");
+        assertTrue(normalizedSql.contains("@parking_workbench_id"), "Expected SQL variable @parking_workbench_id");
+        assertTrue(normalizedSql.contains("@parking_archive_root_id"), "Expected SQL variable @parking_archive_root_id");
+        assertTrue(normalizedSql.contains("@parking_operations_root_id"), "Expected SQL variable @parking_operations_root_id");
+        assertTrue(normalizedSql.contains("@parking_customers_root_id"), "Expected SQL variable @parking_customers_root_id");
+        assertTrue(normalizedSql.contains("@parking_lot_id"), "Expected SQL variable @parking_lot_id");
+        assertTrue(normalizedSql.contains("@parking_space_id"), "Expected SQL variable @parking_space_id");
+        assertTrue(normalizedSql.contains("@parking_temp_id"), "Expected SQL variable @parking_temp_id");
+        assertTrue(normalizedSql.contains("@parking_monthly_id"), "Expected SQL variable @parking_monthly_id");
+        assertTrue(normalizedSql.contains("@parking_membership_id"), "Expected SQL variable @parking_membership_id");
+        assertTrue(normalizedSql.contains("@parking_payment_id"), "Expected SQL variable @parking_payment_id");
+        assertTrue(normalizedSql.contains("@parking_customer_id"), "Expected SQL variable @parking_customer_id");
+        assertTrue(normalizedSql.contains("@parking_vehicle_id"), "Expected SQL variable @parking_vehicle_id");
+        assertTrue(normalizedSql.contains("@parking_lotadmin_id"), "Expected SQL variable @parking_lotadmin_id");
 
         List<MenuInsertSpec> inserts = extractInsertIfNotExistsSpecs(normalizedSql);
-        assertEquals(3, inserts.size(), "Expected exactly 3 parking menu bootstrap insert-if-not-exists blocks");
+        assertEquals(63, inserts.size(), "Expected 63 insert-if-not-exists blocks");
 
-        MenuInsertSpec root = findInsertByMenuType(inserts, "'M'");
-        assertNotNull(root, "Expected directory insert block (menu_type='M')");
-        assertEquals("'停车管理'", root.valuesByColumn().get("menu_name"));
-        assertEquals("0", root.valuesByColumn().get("parent_id"));
-        assertEquals("'parking'", root.valuesByColumn().get("path"));
-        assertEquals("null", root.valuesByColumn().get("component"));
-        assertEquals("'guide'", root.valuesByColumn().get("icon"));
+        MenuInsertSpec workbenchPage = findInsertByComponent(inserts, "'parking/index'");
+        assertNotNull(workbenchPage, "Expected workbench row backed by parking overview page");
+        assertEquals("'\u5de5\u4f5c\u53f0'", workbenchPage.valuesByColumn().get("menu_name"));
+        assertEquals("0", workbenchPage.valuesByColumn().get("parent_id"));
+        assertEquals("'parking'", workbenchPage.valuesByColumn().get("path"));
+        assertEquals("'parking:overview:list'", workbenchPage.valuesByColumn().get("perms"));
         assertTrue(
-            root.notExistsClause().contains("path = 'parking'") && root.notExistsClause().contains("menu_type = 'M'"),
-            "Expected root insert to use path/menu_type business key"
+            workbenchPage.notExistsClause().contains("component = 'parking/index'")
+                && workbenchPage.notExistsClause().contains("menu_type = 'C'"),
+            "Expected workbench business key to use component/menu_type"
         );
 
-        MenuInsertSpec page = findInsertByMenuType(inserts, "'C'");
-        assertNotNull(page, "Expected page insert block (menu_type='C')");
-        assertEquals("'停车概览'", page.valuesByColumn().get("menu_name"));
-        assertEquals("@parking_root_id", page.valuesByColumn().get("parent_id"));
-        assertEquals("'index'", page.valuesByColumn().get("path"));
-        assertEquals("'parking/index'", page.valuesByColumn().get("component"));
-        assertEquals("'parking:overview:list'", page.valuesByColumn().get("perms"));
-        assertEquals("'build'", page.valuesByColumn().get("icon"));
+        MenuInsertSpec archiveRoot = findInsertByPathAndMenuType(inserts, "'archives'", "'M'");
+        assertNotNull(archiveRoot, "Expected archive root directory row");
+        assertEquals("'\u57fa\u7840\u6863\u6848'", archiveRoot.valuesByColumn().get("menu_name"));
+        assertEquals("0", archiveRoot.valuesByColumn().get("parent_id"));
+
+        MenuInsertSpec operationsRoot = findInsertByPathAndMenuType(inserts, "'operations'", "'M'");
+        assertNotNull(operationsRoot, "Expected operations root directory row");
+        assertEquals("'\u8fd0\u8425\u4e2d\u5fc3'", operationsRoot.valuesByColumn().get("menu_name"));
+        assertEquals("0", operationsRoot.valuesByColumn().get("parent_id"));
+
+        MenuInsertSpec customersRoot = findInsertByPathAndMenuType(inserts, "'customers'", "'M'");
+        assertNotNull(customersRoot, "Expected customers root directory row");
+        assertEquals("'\u5ba2\u6237\u4e2d\u5fc3'", customersRoot.valuesByColumn().get("menu_name"));
+        assertEquals("0", customersRoot.valuesByColumn().get("parent_id"));
         assertTrue(
-            page.notExistsClause().contains("component = 'parking/index'") && page.notExistsClause().contains("menu_type = 'C'"),
-            "Expected page insert to use component/menu_type business key"
+            Pattern.compile(
+                "update\\s+sys_menu\\s+set\\s+.*visible\\s*=\\s*'1'.*where\\s+path\\s*=\\s*'monitor'\\s+and\\s+menu_type\\s*=\\s*'M'",
+                Pattern.CASE_INSENSITIVE | Pattern.DOTALL
+            ).matcher(normalizedSql).find(),
+            "Expected SQL to hide the generic 系统监控 top-level menu"
+        );
+        assertTrue(
+            Pattern.compile(
+                "update\\s+sys_menu\\s+set\\s+.*visible\\s*=\\s*'1'.*where\\s+path\\s*=\\s*'http://ruoyi\\.vip'\\s+and\\s+menu_type\\s*=\\s*'M'",
+                Pattern.CASE_INSENSITIVE | Pattern.DOTALL
+            ).matcher(normalizedSql).find(),
+            "Expected SQL to hide the 若依官网 top-level menu"
         );
 
-        MenuInsertSpec button = findInsertByMenuType(inserts, "'F'");
-        assertNotNull(button, "Expected function insert block (menu_type='F')");
-        assertEquals("'停车概览查询'", button.valuesByColumn().get("menu_name"));
-        assertEquals("@parking_overview_id", button.valuesByColumn().get("parent_id"));
-        assertEquals("'parking:overview:query'", button.valuesByColumn().get("perms"));
-        assertEquals("'#'", button.valuesByColumn().get("icon"));
+        MenuInsertSpec lotPage = findInsertByComponent(inserts, "'parking/lot/index'");
+        assertNotNull(lotPage, "Expected parking lot page row");
+        assertEquals("'\u505c\u8f66\u573a\u7ba1\u7406'", lotPage.valuesByColumn().get("menu_name"));
+        assertEquals("@parking_archive_root_id", lotPage.valuesByColumn().get("parent_id"));
+        assertEquals("'parking:lot:list'", lotPage.valuesByColumn().get("perms"));
         assertTrue(
-            button.notExistsClause().contains("perms = 'parking:overview:query'") && button.notExistsClause().contains("menu_type = 'F'"),
-            "Expected function insert to use perms/menu_type business key"
+            lotPage.notExistsClause().contains("component = 'parking/lot/index'")
+                && lotPage.notExistsClause().contains("menu_type = 'C'"),
+            "Expected lot page business key to use component/menu_type"
         );
+
+        MenuInsertSpec spacePage = findInsertByComponent(inserts, "'parking/space/index'");
+        assertNotNull(spacePage, "Expected parking space page row");
+        assertEquals("'\u8f66\u4f4d\u7ba1\u7406'", spacePage.valuesByColumn().get("menu_name"));
+        assertEquals("@parking_archive_root_id", spacePage.valuesByColumn().get("parent_id"));
+        assertEquals("'parking:space:list'", spacePage.valuesByColumn().get("perms"));
+        assertTrue(
+            spacePage.notExistsClause().contains("component = 'parking/space/index'")
+                && spacePage.notExistsClause().contains("menu_type = 'C'"),
+            "Expected space page business key to use component/menu_type"
+        );
+
+        assertFunctionButton(inserts, "'parking:overview:query'", "@parking_workbench_id");
+        assertFunctionButton(inserts, "'parking:lot:query'", "@parking_lot_id");
+        assertFunctionButton(inserts, "'parking:lot:add'", "@parking_lot_id");
+        assertFunctionButton(inserts, "'parking:lot:edit'", "@parking_lot_id");
+        assertFunctionButton(inserts, "'parking:lot:remove'", "@parking_lot_id");
+        assertFunctionButton(inserts, "'parking:space:query'", "@parking_space_id");
+        assertFunctionButton(inserts, "'parking:space:add'", "@parking_space_id");
+        assertFunctionButton(inserts, "'parking:space:edit'", "@parking_space_id");
+        assertFunctionButton(inserts, "'parking:space:remove'", "@parking_space_id");
+
+        MenuInsertSpec tempPage = findInsertByComponent(inserts, "'parking/temp/index'");
+        assertNotNull(tempPage, "Expected parking temp order page row");
+        assertEquals("@parking_operations_root_id", tempPage.valuesByColumn().get("parent_id"));
+        assertEquals("'parking:temp:list'", tempPage.valuesByColumn().get("perms"));
+        assertFunctionButton(inserts, "'parking:temp:query'", "@parking_temp_id");
+        assertFunctionButton(inserts, "'parking:temp:add'", "@parking_temp_id");
+        assertFunctionButton(inserts, "'parking:temp:edit'", "@parking_temp_id");
+        assertFunctionButton(inserts, "'parking:temp:remove'", "@parking_temp_id");
+        assertFunctionButton(inserts, "'parking:temp:settle'", "@parking_temp_id");
+        assertFunctionButton(inserts, "'parking:temp:entry'", "@parking_temp_id");
+        assertFunctionButton(inserts, "'parking:temp:exit'", "@parking_temp_id");
+
+        MenuInsertSpec tempFormPage = findInsertByComponent(inserts, "'parking/temp/form'");
+        assertNotNull(tempFormPage, "Expected parking temp order form page row");
+        assertEquals("@parking_temp_id", tempFormPage.valuesByColumn().get("parent_id"));
+        assertEquals("'1'", tempFormPage.valuesByColumn().get("visible"));
+        assertEquals("'C'", tempFormPage.valuesByColumn().get("menu_type"));
+
+        MenuInsertSpec monthlyPage = findInsertByComponent(inserts, "'parking/monthly/index'");
+        assertNotNull(monthlyPage, "Expected parking monthly order page row");
+        assertEquals("@parking_operations_root_id", monthlyPage.valuesByColumn().get("parent_id"));
+        assertEquals("'parking:monthly:list'", monthlyPage.valuesByColumn().get("perms"));
+        assertFunctionButton(inserts, "'parking:monthly:query'", "@parking_monthly_id");
+        assertFunctionButton(inserts, "'parking:monthly:add'", "@parking_monthly_id");
+        assertFunctionButton(inserts, "'parking:monthly:edit'", "@parking_monthly_id");
+        assertFunctionButton(inserts, "'parking:monthly:remove'", "@parking_monthly_id");
+        assertFunctionButton(inserts, "'parking:monthly:pay'", "@parking_monthly_id");
+        assertFunctionButton(inserts, "'parking:monthly:cancel'", "@parking_monthly_id");
+
+        MenuInsertSpec monthlyFormPage = findInsertByComponent(inserts, "'parking/monthly/form'");
+        assertNotNull(monthlyFormPage, "Expected parking monthly order form page row");
+        assertEquals("@parking_monthly_id", monthlyFormPage.valuesByColumn().get("parent_id"));
+        assertEquals("'1'", monthlyFormPage.valuesByColumn().get("visible"));
+        assertEquals("'C'", monthlyFormPage.valuesByColumn().get("menu_type"));
+
+        MenuInsertSpec membershipPage = findInsertByComponent(inserts, "'parking/membership/index'");
+        assertNotNull(membershipPage, "Expected parking membership order page row");
+        assertEquals("@parking_operations_root_id", membershipPage.valuesByColumn().get("parent_id"));
+        assertEquals("'parking:membership:list'", membershipPage.valuesByColumn().get("perms"));
+        assertFunctionButton(inserts, "'parking:membership:query'", "@parking_membership_id");
+        assertFunctionButton(inserts, "'parking:membership:add'", "@parking_membership_id");
+        assertFunctionButton(inserts, "'parking:membership:edit'", "@parking_membership_id");
+        assertFunctionButton(inserts, "'parking:membership:remove'", "@parking_membership_id");
+        assertFunctionButton(inserts, "'parking:membership:pay'", "@parking_membership_id");
+        assertFunctionButton(inserts, "'parking:membership:cancel'", "@parking_membership_id");
+
+        MenuInsertSpec membershipFormPage = findInsertByComponent(inserts, "'parking/membership/form'");
+        assertNotNull(membershipFormPage, "Expected parking membership order form page row");
+        assertEquals("@parking_membership_id", membershipFormPage.valuesByColumn().get("parent_id"));
+        assertEquals("'1'", membershipFormPage.valuesByColumn().get("visible"));
+        assertEquals("'C'", membershipFormPage.valuesByColumn().get("menu_type"));
+
+        MenuInsertSpec paymentPage = findInsertByComponent(inserts, "'parking/payment/index'");
+        assertNotNull(paymentPage, "Expected parking payment record page row");
+        assertEquals("@parking_operations_root_id", paymentPage.valuesByColumn().get("parent_id"));
+        assertEquals("'parking:payment:list'", paymentPage.valuesByColumn().get("perms"));
+        assertFunctionButton(inserts, "'parking:payment:query'", "@parking_payment_id");
+        assertFunctionButton(inserts, "'parking:payment:add'", "@parking_payment_id");
+        assertFunctionButton(inserts, "'parking:payment:edit'", "@parking_payment_id");
+        assertFunctionButton(inserts, "'parking:payment:remove'", "@parking_payment_id");
+        assertFunctionButton(inserts, "'parking:payment:refund'", "@parking_payment_id");
+
+        MenuInsertSpec paymentFormPage = findInsertByComponent(inserts, "'parking/payment/form'");
+        assertNotNull(paymentFormPage, "Expected parking payment form page row");
+        assertEquals("@parking_payment_id", paymentFormPage.valuesByColumn().get("parent_id"));
+        assertEquals("'1'", paymentFormPage.valuesByColumn().get("visible"));
+        assertEquals("'C'", paymentFormPage.valuesByColumn().get("menu_type"));
+
+        MenuInsertSpec customerPage = findInsertByComponent(inserts, "'parking/customer/index'");
+        assertNotNull(customerPage, "Expected parking customer archive page row");
+        assertEquals("@parking_customers_root_id", customerPage.valuesByColumn().get("parent_id"));
+        assertEquals("'parking:customer:list'", customerPage.valuesByColumn().get("perms"));
+        assertFunctionButton(inserts, "'parking:customer:query'", "@parking_customer_id");
+        assertFunctionButton(inserts, "'parking:customer:add'", "@parking_customer_id");
+        assertFunctionButton(inserts, "'parking:customer:edit'", "@parking_customer_id");
+        assertFunctionButton(inserts, "'parking:customer:remove'", "@parking_customer_id");
+
+        MenuInsertSpec vehiclePage = findInsertByComponent(inserts, "'parking/vehicle/index'");
+        assertNotNull(vehiclePage, "Expected parking user vehicle page row");
+        assertEquals("@parking_customers_root_id", vehiclePage.valuesByColumn().get("parent_id"));
+        assertEquals("'parking:vehicle:list'", vehiclePage.valuesByColumn().get("perms"));
+        assertFunctionButton(inserts, "'parking:vehicle:query'", "@parking_vehicle_id");
+        assertFunctionButton(inserts, "'parking:vehicle:add'", "@parking_vehicle_id");
+        assertFunctionButton(inserts, "'parking:vehicle:edit'", "@parking_vehicle_id");
+        assertFunctionButton(inserts, "'parking:vehicle:remove'", "@parking_vehicle_id");
+        assertFunctionButton(inserts, "'parking:vehicle:setDefault'", "@parking_vehicle_id");
+
+        MenuInsertSpec lotAdminPage = findInsertByComponent(inserts, "'parking/lotadmin/index'");
+        assertNotNull(lotAdminPage, "Expected parking lot admin binding page row");
+        assertEquals("@parking_archive_root_id", lotAdminPage.valuesByColumn().get("parent_id"));
+        assertEquals("'parking:lotadmin:list'", lotAdminPage.valuesByColumn().get("perms"));
+        assertFunctionButton(inserts, "'parking:lotadmin:query'", "@parking_lotadmin_id");
+        assertFunctionButton(inserts, "'parking:lotadmin:add'", "@parking_lotadmin_id");
+        assertFunctionButton(inserts, "'parking:lotadmin:edit'", "@parking_lotadmin_id");
+        assertFunctionButton(inserts, "'parking:lotadmin:remove'", "@parking_lotadmin_id");
     }
 
-    @Test
-    void parkingOverviewPermissionIsActuallyWiredInFrontAndBack() throws IOException
+    private static void assertFunctionButton(List<MenuInsertSpec> inserts, String permsToken, String expectedParentToken)
     {
-        String vue = readProjectFile("ruoyi-ui/src/views/parking/index.vue");
+        MenuInsertSpec button = findInsertByPerms(inserts, permsToken);
+        assertNotNull(button, "Expected function row for perms " + permsToken);
+        assertEquals(expectedParentToken, button.valuesByColumn().get("parent_id"));
+        assertEquals("'F'", button.valuesByColumn().get("menu_type"));
         assertTrue(
-            vue.contains("v-hasPermi=\"['parking:overview:query']\""),
-            "Expected parking page query button to be guarded by v-hasPermi parking:overview:query"
-        );
-
-        String controller = readProjectFile("ruoyi-parking/src/main/java/com/ruoyi/parking/controller/ParkingHealthController.java");
-        assertTrue(
-            controller.contains("@PreAuthorize(\"@ss.hasPermi('parking:overview:query')\")"),
-            "Expected backend endpoint to enforce parking:overview:query via @PreAuthorize"
+            button.notExistsClause().contains("perms = " + permsToken)
+                && button.notExistsClause().contains("menu_type = 'F'"),
+            "Expected function business key to use perms/menu_type for " + permsToken
         );
     }
 
@@ -188,27 +329,38 @@ class ParkingMenuScriptTest
         return sql.replaceAll("(?m)--.*$", "");
     }
 
-    private static String readProjectFile(String relativePath) throws IOException
-    {
-        Path current = Paths.get("").toAbsolutePath().normalize();
-        while (current != null)
-        {
-            Path candidate = current.resolve(relativePath);
-            if (Files.exists(candidate))
-            {
-                return Files.readString(candidate, StandardCharsets.UTF_8);
-            }
-            current = current.getParent();
-        }
-        throw new IOException("Missing file: " + relativePath);
-    }
-
-    private static MenuInsertSpec findInsertByMenuType(List<MenuInsertSpec> inserts, String menuTypeToken)
+    private static MenuInsertSpec findInsertByPathAndMenuType(List<MenuInsertSpec> inserts, String pathToken, String menuTypeToken)
     {
         for (MenuInsertSpec insert : inserts)
         {
-            String menuType = insert.valuesByColumn().get("menu_type");
-            if (menuTypeToken.equals(menuType))
+            Map<String, String> values = insert.valuesByColumn();
+            if (pathToken.equals(values.get("path")) && menuTypeToken.equals(values.get("menu_type")))
+            {
+                return insert;
+            }
+        }
+        return null;
+    }
+
+    private static MenuInsertSpec findInsertByComponent(List<MenuInsertSpec> inserts, String componentToken)
+    {
+        for (MenuInsertSpec insert : inserts)
+        {
+            Map<String, String> values = insert.valuesByColumn();
+            if (componentToken.equals(values.get("component")) && "'C'".equals(values.get("menu_type")))
+            {
+                return insert;
+            }
+        }
+        return null;
+    }
+
+    private static MenuInsertSpec findInsertByPerms(List<MenuInsertSpec> inserts, String permsToken)
+    {
+        for (MenuInsertSpec insert : inserts)
+        {
+            Map<String, String> values = insert.valuesByColumn();
+            if (permsToken.equals(values.get("perms")) && "'F'".equals(values.get("menu_type")))
             {
                 return insert;
             }

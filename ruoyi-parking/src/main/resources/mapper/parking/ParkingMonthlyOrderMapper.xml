@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.parking.mapper.ParkingMonthlyOrderMapper">
+
+    <resultMap type="ParkingMonthlyOrder" id="ParkingMonthlyOrderResult">
+        <id property="monthlyOrderId" column="monthly_order_id"/>
+        <result property="orderNo" column="order_no"/>
+        <result property="customerId" column="customer_id"/>
+        <result property="vehicleId" column="vehicle_id"/>
+        <result property="lotId" column="lot_id"/>
+        <result property="monthCount" column="month_count"/>
+        <result property="startTime" column="start_time"/>
+        <result property="endTime" column="end_time"/>
+        <result property="originalAmount" column="original_amount"/>
+        <result property="discountAmount" column="discount_amount"/>
+        <result property="payAmount" column="pay_amount"/>
+        <result property="payStatus" column="pay_status"/>
+        <result property="bizStatus" column="biz_status"/>
+        <result property="payTime" column="pay_time"/>
+        <result property="cancelTime" column="cancel_time"/>
+        <result property="delFlag" column="del_flag"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+        <result property="lotName" column="lot_name"/>
+    </resultMap>
+
+    <sql id="selectParkingMonthlyOrderColumns">
+        select
+            o.monthly_order_id,
+            o.order_no,
+            o.customer_id,
+            o.vehicle_id,
+            o.lot_id,
+            o.month_count,
+            o.start_time,
+            o.end_time,
+            o.original_amount,
+            o.discount_amount,
+            o.pay_amount,
+            o.pay_status,
+            o.biz_status,
+            o.pay_time,
+            o.cancel_time,
+            o.del_flag,
+            o.create_by,
+            o.create_time,
+            o.update_by,
+            o.update_time,
+            o.remark,
+            pl.lot_name
+        from parking_monthly_order o
+        left join parking_lot pl on pl.lot_id = o.lot_id and pl.del_flag = '0'
+    </sql>
+
+    <select id="selectParkingMonthlyOrderById" parameterType="Long" resultMap="ParkingMonthlyOrderResult">
+        <include refid="selectParkingMonthlyOrderColumns"/>
+        where o.monthly_order_id = #{monthlyOrderId}
+          and o.del_flag = '0'
+    </select>
+
+    <select id="selectParkingMonthlyOrderList" parameterType="ParkingMonthlyOrder" resultMap="ParkingMonthlyOrderResult">
+        <include refid="selectParkingMonthlyOrderColumns"/>
+        where o.del_flag = '0'
+        <if test="orderNo != null and orderNo != ''">
+            and o.order_no like concat('%', #{orderNo}, '%')
+        </if>
+        <if test="customerId != null">
+            and o.customer_id = #{customerId}
+        </if>
+        <if test="lotId != null">
+            and o.lot_id = #{lotId}
+        </if>
+        <if test="payStatus != null and payStatus != ''">
+            and o.pay_status = #{payStatus}
+        </if>
+        <if test="bizStatus != null and bizStatus != ''">
+            and o.biz_status = #{bizStatus}
+        </if>
+        order by o.monthly_order_id desc
+    </select>
+
+    <insert id="insertParkingMonthlyOrder" parameterType="ParkingMonthlyOrder" useGeneratedKeys="true" keyProperty="monthlyOrderId">
+        insert into parking_monthly_order (
+            order_no,
+            customer_id,
+            vehicle_id,
+            lot_id,
+            month_count,
+            start_time,
+            end_time,
+            original_amount,
+            discount_amount,
+            pay_amount,
+            pay_status,
+            biz_status,
+            del_flag,
+            create_by,
+            create_time,
+            remark
+        ) values (
+            #{orderNo},
+            #{customerId},
+            #{vehicleId},
+            #{lotId},
+            #{monthCount},
+            #{startTime},
+            #{endTime},
+            #{originalAmount},
+            #{discountAmount},
+            #{payAmount},
+            #{payStatus},
+            #{bizStatus},
+            '0',
+            #{createBy},
+            sysdate(),
+            #{remark}
+        )
+    </insert>
+
+    <update id="updateParkingMonthlyOrder" parameterType="ParkingMonthlyOrder">
+        update parking_monthly_order
+        <set>
+            <if test="orderNo != null and orderNo != ''">order_no = #{orderNo},</if>
+            <if test="customerId != null">customer_id = #{customerId},</if>
+            <if test="vehicleId != null">vehicle_id = #{vehicleId},</if>
+            <if test="lotId != null">lot_id = #{lotId},</if>
+            <if test="monthCount != null">month_count = #{monthCount},</if>
+            <if test="startTime != null">start_time = #{startTime},</if>
+            <if test="endTime != null">end_time = #{endTime},</if>
+            <if test="originalAmount != null">original_amount = #{originalAmount},</if>
+            <if test="discountAmount != null">discount_amount = #{discountAmount},</if>
+            <if test="payAmount != null">pay_amount = #{payAmount},</if>
+            <if test="payStatus != null and payStatus != ''">pay_status = #{payStatus},</if>
+            <if test="bizStatus != null and bizStatus != ''">biz_status = #{bizStatus},</if>
+            <if test="payTime != null">pay_time = #{payTime},</if>
+            <if test="cancelTime != null">cancel_time = #{cancelTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </set>
+        where monthly_order_id = #{monthlyOrderId}
+          and del_flag = '0'
+    </update>
+
+    <update id="deleteParkingMonthlyOrderByIds">
+        update parking_monthly_order
+        set del_flag = '2',
+            update_time = sysdate()
+        where del_flag = '0'
+          and monthly_order_id in
+        <foreach collection="monthlyOrderIds" item="monthlyOrderId" open="(" separator="," close=")">
+            #{monthlyOrderId}
+        </foreach>
+    </update>
+
+</mapper>

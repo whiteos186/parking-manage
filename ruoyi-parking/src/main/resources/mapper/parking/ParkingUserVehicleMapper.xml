@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.parking.mapper.ParkingUserVehicleMapper">
+
+    <resultMap type="ParkingUserVehicle" id="ParkingUserVehicleResult">
+        <id property="vehicleId" column="vehicle_id"/>
+        <result property="customerId" column="customer_id"/>
+        <result property="plateNo" column="plate_no"/>
+        <result property="vehicleType" column="vehicle_type"/>
+        <result property="brandName" column="brand_name"/>
+        <result property="vehicleColor" column="vehicle_color"/>
+        <result property="isDefault" column="is_default"/>
+        <result property="status" column="status"/>
+        <result property="bindTime" column="bind_time"/>
+        <result property="delFlag" column="del_flag"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <sql id="selectParkingUserVehicleColumns">
+        select
+            vehicle_id,
+            customer_id,
+            plate_no,
+            vehicle_type,
+            brand_name,
+            vehicle_color,
+            is_default,
+            status,
+            bind_time,
+            del_flag,
+            create_by,
+            create_time,
+            update_by,
+            update_time,
+            remark
+        from parking_user_vehicle
+    </sql>
+
+    <select id="selectParkingUserVehicleById" parameterType="Long" resultMap="ParkingUserVehicleResult">
+        <include refid="selectParkingUserVehicleColumns"/>
+        where vehicle_id = #{vehicleId}
+          and del_flag = '0'
+    </select>
+
+    <select id="selectParkingUserVehicleList" parameterType="ParkingUserVehicle" resultMap="ParkingUserVehicleResult">
+        <include refid="selectParkingUserVehicleColumns"/>
+        where del_flag = '0'
+        <if test="customerId != null">
+            and customer_id = #{customerId}
+        </if>
+        <if test="plateNo != null and plateNo != ''">
+            and plate_no like concat('%', #{plateNo}, '%')
+        </if>
+        <if test="vehicleType != null and vehicleType != ''">
+            and vehicle_type = #{vehicleType}
+        </if>
+        <if test="status != null and status != ''">
+            and status = #{status}
+        </if>
+        <if test="isDefault != null and isDefault != ''">
+            and is_default = #{isDefault}
+        </if>
+        order by vehicle_id desc
+    </select>
+
+    <select id="selectParkingUserVehicleOptions" resultMap="ParkingUserVehicleResult">
+        <include refid="selectParkingUserVehicleColumns"/>
+        where del_flag = '0'
+          and status = '0'
+        <if test="customerId != null">
+            and customer_id = #{customerId}
+        </if>
+        order by is_default desc, vehicle_id desc
+    </select>
+
+    <select id="selectParkingUserVehicleByPlateNo" parameterType="String" resultMap="ParkingUserVehicleResult">
+        <include refid="selectParkingUserVehicleColumns"/>
+        where plate_no = #{plateNo}
+          and del_flag = '0'
+        limit 1
+    </select>
+
+    <insert id="insertParkingUserVehicle" parameterType="ParkingUserVehicle" useGeneratedKeys="true" keyProperty="vehicleId">
+        insert into parking_user_vehicle (
+            customer_id,
+            plate_no,
+            vehicle_type,
+            brand_name,
+            vehicle_color,
+            is_default,
+            status,
+            bind_time,
+            del_flag,
+            create_by,
+            create_time,
+            remark
+        ) values (
+            #{customerId},
+            #{plateNo},
+            #{vehicleType},
+            #{brandName},
+            #{vehicleColor},
+            #{isDefault},
+            #{status},
+            #{bindTime},
+            '0',
+            #{createBy},
+            sysdate(),
+            #{remark}
+        )
+    </insert>
+
+    <update id="updateParkingUserVehicle" parameterType="ParkingUserVehicle">
+        update parking_user_vehicle
+        <set>
+            <if test="customerId != null">customer_id = #{customerId},</if>
+            <if test="plateNo != null and plateNo != ''">plate_no = #{plateNo},</if>
+            <if test="vehicleType != null and vehicleType != ''">vehicle_type = #{vehicleType},</if>
+            <if test="brandName != null">brand_name = #{brandName},</if>
+            <if test="vehicleColor != null">vehicle_color = #{vehicleColor},</if>
+            <if test="isDefault != null and isDefault != ''">is_default = #{isDefault},</if>
+            <if test="status != null and status != ''">status = #{status},</if>
+            <if test="bindTime != null">bind_time = #{bindTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </set>
+        where vehicle_id = #{vehicleId}
+          and del_flag = '0'
+    </update>
+
+    <update id="deleteParkingUserVehicleByIds">
+        update parking_user_vehicle
+        set del_flag = '2',
+            update_time = sysdate()
+        where del_flag = '0'
+          and vehicle_id in
+        <foreach collection="vehicleIds" item="vehicleId" open="(" separator="," close=")">
+            #{vehicleId}
+        </foreach>
+    </update>
+
+    <update id="clearDefaultByCustomerId">
+        update parking_user_vehicle
+        set is_default = '0',
+            update_time = sysdate()
+        where customer_id = #{customerId}
+          and del_flag = '0'
+          and is_default = '1'
+    </update>
+
+</mapper>

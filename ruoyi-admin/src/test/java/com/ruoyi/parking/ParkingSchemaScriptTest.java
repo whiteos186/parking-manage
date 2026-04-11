@@ -24,12 +24,13 @@ class ParkingSchemaScriptTest
     private static final Map<String, List<String>> REQUIRED_TABLE_COLUMNS = Map.ofEntries(
         Map.entry("parking_lot", List.of("lot_id", "lot_name", "total_space_count", "available_space_count")),
         Map.entry("parking_space", List.of("space_id", "lot_id", "space_code", "space_type", "status")),
+        Map.entry("parking_customer", List.of("customer_id", "customer_code", "customer_name", "mobile", "status")),
         Map.entry("parking_lot_admin", List.of("lot_admin_id", "lot_id", "user_id")),
-        Map.entry("parking_user_vehicle", List.of("vehicle_id", "user_id", "plate_no", "vehicle_type")),
-        Map.entry("parking_membership_order", List.of("membership_order_id", "order_no", "user_id", "lot_id", "pay_status")),
-        Map.entry("parking_monthly_order", List.of("monthly_order_id", "order_no", "user_id", "lot_id")),
-        Map.entry("parking_temp_order", List.of("temp_order_id", "order_no", "lot_id", "user_id", "vehicle_plate_no")),
-        Map.entry("parking_payment_record", List.of("payment_id", "biz_order_no", "biz_order_type", "pay_amount", "pay_status"))
+        Map.entry("parking_user_vehicle", List.of("vehicle_id", "customer_id", "plate_no", "vehicle_type")),
+        Map.entry("parking_membership_order", List.of("membership_order_id", "order_no", "customer_id", "lot_id", "pay_status")),
+        Map.entry("parking_monthly_order", List.of("monthly_order_id", "order_no", "customer_id", "lot_id")),
+        Map.entry("parking_temp_order", List.of("temp_order_id", "order_no", "lot_id", "customer_id", "vehicle_plate_no")),
+        Map.entry("parking_payment_record", List.of("payment_id", "biz_order_no", "biz_order_type", "customer_id", "pay_amount", "pay_status"))
     );
 
     @Test
@@ -47,6 +48,7 @@ class ParkingSchemaScriptTest
         }
 
         assertParkingSpaceAndLotSeedInvariants(normalizedSql);
+        assertCustomerSeedConsistency(normalizedSql);
         assertMembershipPaymentSeedConsistency(normalizedSql);
     }
 
@@ -185,6 +187,32 @@ class ParkingSchemaScriptTest
             "Expected membership order pay_amount to match payment pay_amount"
         );
         assertEquals("1", membershipPayment.get("biz_order_type"), "Expected membership payment biz_order_type='1'");
+    }
+
+    private static void assertCustomerSeedConsistency(String sql)
+    {
+        List<Map<String, String>> customerRows = extractInsertedRows(sql, "parking_customer");
+        assertEquals(1, customerRows.size(), "Expected exactly 1 seeded parking_customer row for minimal dataset");
+
+        Map<String, String> customer = customerRows.get(0);
+        String customerId = customer.get("customer_id");
+        assertNotNull(customerId, "Expected seeded parking_customer row to include customer_id");
+        assertEquals("CUST-0001", customer.get("customer_code"), "Expected demo customer code CUST-0001");
+
+        Map<String, String> vehicle = extractInsertedRows(sql, "parking_user_vehicle").stream().findFirst().orElse(null);
+        assertNotNull(vehicle, "Expected seeded parking_user_vehicle row");
+        assertEquals(customerId, vehicle.get("customer_id"),
+            "Expected seeded vehicle to bind to the seeded parking customer");
+
+        Map<String, String> monthlyOrder = extractInsertedRows(sql, "parking_monthly_order").stream().findFirst().orElse(null);
+        assertNotNull(monthlyOrder, "Expected seeded parking_monthly_order row");
+        assertEquals(customerId, monthlyOrder.get("customer_id"),
+            "Expected seeded monthly order to use parking customer identity");
+
+        Map<String, String> tempOrder = extractInsertedRows(sql, "parking_temp_order").stream().findFirst().orElse(null);
+        assertNotNull(tempOrder, "Expected seeded parking_temp_order row");
+        assertEquals(customerId, tempOrder.get("customer_id"),
+            "Expected seeded temporary order to use parking customer identity");
     }
 
     private static List<Map<String, String>> extractInsertedRows(String sql, String tableName)

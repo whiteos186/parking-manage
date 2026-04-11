@@ -1,6 +1,7 @@
 package com.ruoyi.parking.domain;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 
 public class ParkingOverviewStats implements Serializable
 {
@@ -17,6 +18,14 @@ public class ParkingOverviewStats implements Serializable
     private Long disabledSpaceCount;
 
     private Long lockedSpaceCount;
+
+    private Long todayEntryCount;
+
+    private Long todayExitCount;
+
+    private BigDecimal todayRevenue;
+
+    private Long activeTempOrderCount;
 
     public Long getLotCount()
     {
@@ -76,5 +85,45 @@ public class ParkingOverviewStats implements Serializable
     public void setLockedSpaceCount(Long lockedSpaceCount)
     {
         this.lockedSpaceCount = lockedSpaceCount;
+    }
+
+    public Long getTodayEntryCount()
+    {
+        return todayEntryCount;
+    }
+
+    public void setTodayEntryCount(Long todayEntryCount)
+    {
+        this.todayEntryCount = todayEntryCount;
+    }
+
+    public Long getTodayExitCount()
+    {
+        return todayExitCount;
+    }
+
+    public void setTodayExitCount(Long todayExitCount)
+    {
+        this.todayExitCount = todayExitCount;
+    }
+
+    public BigDecimal getTodayRevenue()
+    {
+        return todayRevenue;
+    }
+
+    public void setTodayRevenue(BigDecimal todayRevenue)
+    {
+        this.todayRevenue = todayRevenue;
+    }
+
+    public Long getActiveTempOrderCount()
+    {
+        return activeTempOrderCount;
+    }
+
+    public void setActiveTempOrderCount(Long activeTempOrderCount)
+    {
+        this.activeTempOrderCount = activeTempOrderCount;
     }
 }

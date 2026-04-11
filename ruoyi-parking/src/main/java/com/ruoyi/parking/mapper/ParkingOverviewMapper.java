@@ -1,17 +1,13 @@
 package com.ruoyi.parking.mapper;
 
-import com.ruoyi.parking.domain.ParkingLot;
 import com.ruoyi.parking.domain.ParkingOverviewStats;
-import com.ruoyi.parking.domain.ParkingSpace;
+import com.ruoyi.parking.domain.ParkingRecentOrder;
 import java.util.List;
+import org.apache.ibatis.annotations.Param;
 
 public interface ParkingOverviewMapper
 {
-    ParkingOverviewStats selectOverviewStats();
+    ParkingOverviewStats selectOverviewStats(@Param("lotIds") List<Long> lotIds);
 
-    List<ParkingLot> selectParkingLotOptions();
-
-    List<ParkingLot> selectParkingLotList(ParkingLot parkingLot);
-
-    List<ParkingSpace> selectParkingSpaceList(ParkingSpace parkingSpace);
+    List<ParkingRecentOrder> selectRecentOrders(@Param("limit") int limit, @Param("lotIds") List<Long> lotIds);
 }

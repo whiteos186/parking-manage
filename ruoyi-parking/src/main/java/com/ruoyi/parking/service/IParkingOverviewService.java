@@ -1,17 +1,12 @@
 package com.ruoyi.parking.service;
 
-import com.ruoyi.parking.domain.ParkingLot;
 import com.ruoyi.parking.domain.ParkingOverviewStats;
-import com.ruoyi.parking.domain.ParkingSpace;
+import com.ruoyi.parking.domain.ParkingRecentOrder;
 import java.util.List;
 
 public interface IParkingOverviewService
 {
     ParkingOverviewStats selectOverviewStats();
 
-    List<ParkingLot> selectParkingLotOptions();
-
-    List<ParkingLot> selectParkingLotList(ParkingLot parkingLot);
-
-    List<ParkingSpace> selectParkingSpaceList(ParkingSpace parkingSpace);
+    List<ParkingRecentOrder> selectRecentOrders(int limit);
 }

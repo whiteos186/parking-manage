@@ -1,6 +1,8 @@
 package com.ruoyi.parking.domain;
 
 import com.ruoyi.common.core.domain.BaseEntity;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 public class ParkingSpace extends BaseEntity
 {
@@ -8,18 +10,22 @@ public class ParkingSpace extends BaseEntity
 
     private Long spaceId;
 
+    @NotNull(message = "所属停车场不能为空")
     private Long lotId;
 
     private String lotName;
 
+    @NotBlank(message = "车位编码不能为空")
     private String spaceCode;
 
     private String areaName;
 
     private String floorNo;
 
+    @NotBlank(message = "车位类型不能为空")
     private String spaceType;
 
+    @NotBlank(message = "车位状态不能为空")
     private String status;
 
     private String delFlag;
