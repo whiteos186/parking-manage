@@ -27,8 +27,7 @@ services:
       - parking_mysql_data:/var/lib/mysql
       - ./sql/ry_20260320.sql:/docker-entrypoint-initdb.d/01-ry-base.sql:ro
       - ./sql/quartz.sql:/docker-entrypoint-initdb.d/02-quartz.sql:ro
-      - ./sql/parking/parking_bootstrap.sql:/docker-entrypoint-initdb.d/03-parking-bootstrap.sql:ro
-      - ./sql/parking/parking_menu.sql:/docker-entrypoint-initdb.d/04-parking-menu.sql:ro
+      - ./sql/parking/parking_init.sql:/docker-entrypoint-initdb.d/03-parking-init.sql:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-p123456"]
       interval: 10s
