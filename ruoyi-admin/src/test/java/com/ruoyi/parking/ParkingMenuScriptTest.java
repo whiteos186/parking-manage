@@ -249,14 +249,14 @@ class ParkingMenuScriptTest
         Path current = Paths.get("").toAbsolutePath().normalize();
         while (current != null)
         {
-            Path candidate = current.resolve(Paths.get("sql", "parking", "parking_menu.sql"));
+            Path candidate = current.resolve(Paths.get("sql", "parking", "parking_init.sql"));
             if (Files.exists(candidate))
             {
                 return candidate;
             }
             current = current.getParent();
         }
-        return Paths.get("sql", "parking", "parking_menu.sql");
+        return Paths.get("sql", "parking", "parking_init.sql");
     }
 
     private static List<MenuInsertSpec> extractInsertIfNotExistsSpecs(String sql)

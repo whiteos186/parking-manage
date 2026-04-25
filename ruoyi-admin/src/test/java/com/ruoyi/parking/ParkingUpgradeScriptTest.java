@@ -8,89 +8,73 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 
 /**
- * 验证 parking_upgrade_202604.sql 幂等 ALTER TABLE 脚本的结构正确性。
- * 该脚本用于为已有库补充 parking_customer 的三个会员字段。
+ * 验证 parking_init.sql 中历史升级字段已经进入全量初始化脚本。
  */
 class ParkingUpgradeScriptTest
 {
     @Test
-    void upgradeScriptContainsIdempotentAlterForAllThreeMemberColumns() throws IOException
+    void initScriptContainsAllCustomerMemberColumns() throws IOException
     {
-        Path scriptPath = locateUpgradeScript();
-        assertTrue(Files.exists(scriptPath), () -> "Missing upgrade script: " + scriptPath);
+        Path scriptPath = locateInitScript();
+        assertTrue(Files.exists(scriptPath), () -> "Missing parking init script: " + scriptPath);
 
-        String sql = Files.readString(scriptPath, StandardCharsets.UTF_8);
-
-        // 每个会员列都应有幂等 ALTER TABLE 语句
-        assertIdempotentAlterPresent(sql, "is_member");
-        assertIdempotentAlterPresent(sql, "member_type");
-        assertIdempotentAlterPresent(sql, "member_expire_time");
-    }
-
-    @Test
-    void upgradeScriptAltersCorrectTable() throws IOException
-    {
-        Path scriptPath = locateUpgradeScript();
         String sql = Files.readString(scriptPath, StandardCharsets.UTF_8).toLowerCase();
 
-        // 必须操作 parking_customer 表
-        assertTrue(
-            sql.contains("alter table parking_customer"),
-            "Expected upgrade script to alter parking_customer table"
-        );
-        // 不能误操作其他业务表
-        assertTrue(
-            !sql.contains("alter table parking_lot"),
-            "Upgrade script must not alter parking_lot"
-        );
+        assertTrue(sql.contains("is_member"), "Expected parking_customer.is_member");
+        assertTrue(sql.contains("member_type"), "Expected parking_customer.member_type");
+        assertTrue(sql.contains("member_expire_time"), "Expected parking_customer.member_expire_time");
     }
 
     @Test
-    void upgradeScriptIsRepeatableViaDropAndCallPattern() throws IOException
+    void initScriptCreatesCustomerTableWithMemberColumns() throws IOException
     {
-        Path scriptPath = locateUpgradeScript();
-        String sql = Files.readString(scriptPath, StandardCharsets.UTF_8);
-
-        // 幂等模式：用 stored procedure 包装，执行完即删除
-        assertTrue(
-            sql.contains("drop procedure if exists"),
-            "Expected idempotent pattern: drop procedure if exists"
-        );
-        assertTrue(
-            sql.contains("create procedure"),
-            "Expected idempotent pattern: create procedure"
-        );
-        assertTrue(
-            sql.contains("call "),
-            "Expected idempotent pattern: call <procedure>"
-        );
-
-        // 执行完后清理 procedure
-        long dropCount = countOccurrences(sql, "drop procedure if exists");
-        assertTrue(dropCount >= 2, "Expected drop before create and drop after call (idempotent cleanup)");
-    }
-
-    @Test
-    void upgradeScriptChecksInformationSchemaBeforeAlter() throws IOException
-    {
-        Path scriptPath = locateUpgradeScript();
+        Path scriptPath = locateInitScript();
         String sql = Files.readString(scriptPath, StandardCharsets.UTF_8).toLowerCase();
 
-        // 每个列的幂等检查必须查询 information_schema.columns
-        long infoSchemaCheckCount = countOccurrences(sql, "information_schema.columns");
-        assertEquals(3L, infoSchemaCheckCount,
-            "Expected 3 information_schema.columns checks — one per member column");
+        int tableStart = sql.indexOf("create table parking_customer");
+        assertTrue(tableStart >= 0, "Expected create table parking_customer");
+
+        int nextTableStart = sql.indexOf("create table", tableStart + 1);
+        String customerTableSql = nextTableStart > tableStart ? sql.substring(tableStart, nextTableStart) : sql.substring(tableStart);
+
+        assertTrue(customerTableSql.contains("is_member"), "Expected member flag in parking_customer table");
+        assertTrue(customerTableSql.contains("member_type"), "Expected member type in parking_customer table");
+        assertTrue(customerTableSql.contains("member_expire_time"), "Expected member expire time in parking_customer table");
     }
 
     @Test
-    void upgradeScriptSeedsParkingGlobalConfigAndDictData() throws IOException
+    void initScriptUsesDropAndCreatePattern() throws IOException
     {
-        Path scriptPath = locateUpgradeScript();
+        Path scriptPath = locateInitScript();
+        String sql = Files.readString(scriptPath, StandardCharsets.UTF_8).toLowerCase();
+
+        assertTrue(sql.contains("drop table if exists parking_customer"),
+            "Expected full init script to drop parking_customer");
+        assertTrue(sql.contains("create table parking_customer"),
+            "Expected full init script to create parking_customer");
+    }
+
+    @Test
+    void initScriptContainsMonthlyOrderPlateSnapshot() throws IOException
+    {
+        Path scriptPath = locateInitScript();
+        String sql = Files.readString(scriptPath, StandardCharsets.UTF_8).toLowerCase();
+
+        assertEquals(0L, countOccurrences(sql, "information_schema.columns"),
+            "Full init script should create the current schema directly");
+        assertTrue(sql.contains("create table parking_monthly_order"),
+            "Expected monthly order table");
+        assertTrue(sql.contains("vehicle_plate_no"),
+            "Expected monthly order plate snapshot column");
+    }
+
+    @Test
+    void initScriptSeedsParkingGlobalConfigAndDictData() throws IOException
+    {
+        Path scriptPath = locateInitScript();
         String sql = Files.readString(scriptPath, StandardCharsets.UTF_8).toLowerCase();
 
         assertTrue(sql.contains("parking.rule.monthlyprice"),
@@ -103,31 +87,23 @@ class ParkingUpgradeScriptTest
             "Expected dict seed for parking_payment_channel");
         assertTrue(sql.contains("parking_lot_status"),
             "Expected dict seed for parking_lot_status");
+        assertTrue(sql.contains("parking_space_status"),
+            "Expected dict seed for parking_space_status");
+        assertTrue(sql.contains("parking_vehicle_type"),
+            "Expected dict seed for parking_vehicle_type");
+        assertTrue(sql.contains("parking_customer_type"),
+            "Expected dict seed for parking_customer_type");
+        assertTrue(sql.contains("parking_temp_biz_status"),
+            "Expected dict seed for parking_temp_biz_status");
+        assertTrue(sql.contains("parking_monthly_pay_status"),
+            "Expected dict seed for parking_monthly_pay_status");
+        assertTrue(sql.contains("parking_membership_biz_status"),
+            "Expected dict seed for parking_membership_biz_status");
+        assertTrue(sql.contains("parking_lot_admin_status"),
+            "Expected dict seed for parking_lot_admin_status");
     }
 
     // ---- helpers ----
-
-    private void assertIdempotentAlterPresent(String sql, String columnName)
-    {
-        String lowerSql = sql.toLowerCase();
-
-        // information_schema 检查中包含列名
-        assertTrue(
-            lowerSql.contains("column_name  = '" + columnName + "'")
-                || lowerSql.contains("column_name = '" + columnName + "'"),
-            () -> "Expected information_schema guard for column: " + columnName
-        );
-
-        // alter table ... add column 中包含列名
-        Pattern alterPattern = Pattern.compile(
-            "add\\s+column\\s+" + Pattern.quote(columnName) + "\\s",
-            Pattern.CASE_INSENSITIVE
-        );
-        assertTrue(
-            alterPattern.matcher(sql).find(),
-            () -> "Expected ALTER TABLE ... ADD COLUMN " + columnName + " in upgrade script"
-        );
-    }
 
     private static long countOccurrences(String text, String target)
     {
@@ -143,18 +119,18 @@ class ParkingUpgradeScriptTest
         return count;
     }
 
-    private Path locateUpgradeScript()
+    private Path locateInitScript()
     {
         Path current = Paths.get("").toAbsolutePath().normalize();
         while (current != null)
         {
-            Path candidate = current.resolve(Paths.get("sql", "parking", "parking_upgrade_202604.sql"));
+            Path candidate = current.resolve(Paths.get("sql", "parking", "parking_init.sql"));
             if (Files.exists(candidate))
             {
                 return candidate;
             }
             current = current.getParent();
         }
-        return Paths.get("sql", "parking", "parking_upgrade_202604.sql");
+        return Paths.get("sql", "parking", "parking_init.sql");
     }
 }

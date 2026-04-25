@@ -57,14 +57,14 @@ class ParkingSchemaScriptTest
         Path current = Paths.get("").toAbsolutePath().normalize();
         while (current != null)
         {
-            Path candidate = current.resolve(Paths.get("sql", "parking", "parking_bootstrap.sql"));
+            Path candidate = current.resolve(Paths.get("sql", "parking", "parking_init.sql"));
             if (Files.exists(candidate))
             {
                 return candidate;
             }
             current = current.getParent();
         }
-        return Paths.get("sql", "parking", "parking_bootstrap.sql");
+        return Paths.get("sql", "parking", "parking_init.sql");
     }
 
     private static void assertTableContainsColumns(String sql, String tableName, List<String> columns)
@@ -158,23 +158,23 @@ class ParkingSchemaScriptTest
     {
         List<Map<String, String>> membershipRows = extractInsertedRows(sql, "parking_membership_order");
         Map<String, String> membershipOrder = membershipRows.stream()
-            .filter(row -> "PO202603290001".equals(row.get("order_no")))
+            .filter(row -> "PO-DEMO-0001".equals(row.get("order_no")))
             .findFirst()
             .orElse(null);
         assertNotNull(
             membershipOrder,
-            "Expected membership order PO202603290001 in parking_membership_order"
+            "Expected membership order PO-DEMO-0001 in parking_membership_order"
         );
 
         List<Map<String, String>> paymentRows = extractInsertedRows(sql, "parking_payment_record");
         Map<String, String> membershipPayment = paymentRows.stream()
-            .filter(row -> "PO202603290001".equals(row.get("biz_order_no")))
+            .filter(row -> "PO-DEMO-0001".equals(row.get("biz_order_no")))
             .findFirst()
             .orElse(null);
 
         assertNotNull(
             membershipPayment,
-            "Expected payment record for membership order PO202603290001 in parking_payment_record"
+            "Expected payment record for membership order PO-DEMO-0001 in parking_payment_record"
         );
 
         assertEquals(membershipOrder.get("order_no"), membershipPayment.get("biz_order_no"),
