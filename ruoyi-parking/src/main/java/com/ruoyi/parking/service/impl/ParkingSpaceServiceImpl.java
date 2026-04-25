@@ -42,14 +42,7 @@ public class ParkingSpaceServiceImpl implements IParkingSpaceService
     @Transactional(rollbackFor = Exception.class)
     public int insertParkingSpace(ParkingSpace parkingSpace)
     {
-        if (StringUtils.isEmpty(parkingSpace.getSpaceType()))
-        {
-            parkingSpace.setSpaceType("1");
-        }
-        if (StringUtils.isEmpty(parkingSpace.getStatus()))
-        {
-            parkingSpace.setStatus("0");
-        }
+        applySpaceInsertDefaults(parkingSpace);
         ParkingLot parkingLot = validateLotExists(parkingSpace.getLotId());
         validateCapacity(parkingLot);
         validateUniqueSpaceCode(parkingSpace);
@@ -67,22 +60,7 @@ public class ParkingSpaceServiceImpl implements IParkingSpaceService
         {
             throw new ServiceException("车位不存在");
         }
-        if (parkingSpace.getLotId() == null)
-        {
-            parkingSpace.setLotId(current.getLotId());
-        }
-        if (StringUtils.isEmpty(parkingSpace.getSpaceCode()))
-        {
-            parkingSpace.setSpaceCode(current.getSpaceCode());
-        }
-        if (StringUtils.isEmpty(parkingSpace.getSpaceType()))
-        {
-            parkingSpace.setSpaceType(current.getSpaceType());
-        }
-        if (StringUtils.isEmpty(parkingSpace.getStatus()))
-        {
-            parkingSpace.setStatus(current.getStatus());
-        }
+        mergeSpaceUpdateDefaults(parkingSpace, current);
         validateLotExists(parkingSpace.getLotId());
         validateUniqueSpaceCode(parkingSpace);
         int rows = parkingSpaceMapper.updateParkingSpace(parkingSpace);
@@ -166,5 +144,37 @@ public class ParkingSpaceServiceImpl implements IParkingSpaceService
         int occupied = parkingSpaceMapper.countOccupiedParkingSpaceByLotId(lotId);
         int availableSpaceCount = Math.max(parkingLot.getTotalSpaceCount() - occupied, 0);
         parkingLotMapper.updateParkingLotSpaceStats(lotId, availableSpaceCount, updateBy);
+    }
+
+    private void applySpaceInsertDefaults(ParkingSpace parkingSpace)
+    {
+        if (StringUtils.isEmpty(parkingSpace.getSpaceType()))
+        {
+            parkingSpace.setSpaceType("1");
+        }
+        if (StringUtils.isEmpty(parkingSpace.getStatus()))
+        {
+            parkingSpace.setStatus("0");
+        }
+    }
+
+    private void mergeSpaceUpdateDefaults(ParkingSpace parkingSpace, ParkingSpace current)
+    {
+        if (parkingSpace.getLotId() == null)
+        {
+            parkingSpace.setLotId(current.getLotId());
+        }
+        if (StringUtils.isEmpty(parkingSpace.getSpaceCode()))
+        {
+            parkingSpace.setSpaceCode(current.getSpaceCode());
+        }
+        if (StringUtils.isEmpty(parkingSpace.getSpaceType()))
+        {
+            parkingSpace.setSpaceType(current.getSpaceType());
+        }
+        if (StringUtils.isEmpty(parkingSpace.getStatus()))
+        {
+            parkingSpace.setStatus(current.getStatus());
+        }
     }
 }
