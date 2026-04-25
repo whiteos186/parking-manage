@@ -45,3 +45,13 @@ nbdist/
 !*/build/*.java
 !*/build/*.html
 !*/build/*.xml
+
+######################################################################
+# Local AI/test artifacts
+
+.claude/settings.local.json
+.claude/skills/e2e-test/auth/*.json
+.claude/skills/e2e-test/reports/
+.claude/skills/parking-bill-module-workspace/
+tmp-playwright-smoke.*
+playwright-*.png

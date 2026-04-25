@@ -1,0 +1,26 @@
+{
+  "skill_name": "parking-bill-module",
+  "evals": [
+    {
+      "id": 1,
+      "name": "eval-1-maintenance",
+      "prompt": "我要新增一个\"设备维修工单\"模块,挂在运营中心下面。字段:设备编码(必填,varchar 64)、故障类型(下拉:1硬件 2软件 3网络 4其他)、故障描述(必填,长文本 textarea)、预估金额(decimal)、计划维修时间(datetime)、实际维修时间(datetime)、所属停车场(必填)。需要默认的草稿→提交→审核通过/拒绝→作废 这套审核流程。请把后端、前端、SQL、菜单、测试都做齐。",
+      "expected_output": "完整的维修工单单据模块全套文件:Domain/Mapper/XML/Service/Controller、API/options/list/form、parking_bootstrap.sql 追加块、parking_menu.sql 追加块(10 个 insert 块)、Controller 单元测试、Schema/Menu 测试更新建议",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "eval-2-temp-application",
+      "prompt": "搭一个\"临时车位申请\"单据,字段:车牌号(必填)、停车场(必填)、申请人姓名、申请人电话、申请理由(textarea)、申请有效天数、备注。挂在客户中心。审核通过后要在 parking_temp_order 里自动建一条对应的临停记录(车牌号、停车场、有效期开始=审核时间、有效期结束=审核时间+有效天数)。",
+      "expected_output": "临时车位申请单据模块,带审核流;approveParkingTempApplication 方法里包含级联创建 parking_temp_order 记录的逻辑(注入 ParkingTempOrderMapper 或 IParkingTempOrderService),菜单挂在 @parking_customers_root_id 下",
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "eval-3-inspection-custom",
+      "prompt": "新增一个\"日常巡检报告\"模块,挂在运营中心。字段:巡检停车场(必填)、巡检人姓名(必填)、巡检时间(datetime)、发现问题数量(int)、处理建议(textarea)、附件URL(varchar)。状态机不要审核流,只需要 草稿(00) 和 已提交(20) 两个状态,提交后不能再编辑也不能删除。",
+      "expected_output": "巡检报告模块,简化状态机:只有 submit 一个业务动作(无 approve/reject/void),只有 BILL_STATUS_OPTIONS 中的两项,列表页和编辑页只展示两态相关按钮和只读规则,菜单只插入 list/form/query/add/edit/remove/submit 7 个 perms 块",
+      "files": []
+    }
+  ]
+}
