@@ -1,9 +1,8 @@
 <template>
   <div class="app-container">
-    <div class="page-title">临停订单管理</div>
-    <el-form ref="queryForm" :model="queryParams" size="small" :inline="true" v-show="showSearch">
+    <search-form :model="queryParams" :visible="showSearch" @search="handleQuery" @reset="resetDateRange">
       <el-form-item label="所属停车场" prop="lotId">
-        <el-select v-model="queryParams.lotId" clearable placeholder="请选择停车场">
+        <el-select v-model="queryParams.lotId" clearable placeholder="请选择停车场" style="width: 160px">
           <el-option
             v-for="item in lotOptions"
             :key="item.lotId"
@@ -32,9 +31,9 @@
         />
       </el-form-item>
       <el-form-item label="支付状态" prop="payStatus">
-        <el-select v-model="queryParams.payStatus" clearable placeholder="请选择支付状态">
+        <el-select v-model="queryParams.payStatus" clearable placeholder="请选择支付状态" style="width: 160px">
           <el-option
-            v-for="item in payStatusOptions"
+            v-for="item in dict.type.parking_temp_pay_status"
             :key="item.value"
             :label="item.label"
             :value="item.value"
@@ -42,9 +41,9 @@
         </el-select>
       </el-form-item>
       <el-form-item label="业务状态" prop="bizStatus">
-        <el-select v-model="queryParams.bizStatus" clearable placeholder="请选择业务状态">
+        <el-select v-model="queryParams.bizStatus" clearable placeholder="请选择业务状态" style="width: 160px">
           <el-option
-            v-for="item in bizStatusOptions"
+            v-for="item in dict.type.parking_temp_biz_status"
             :key="item.value"
             :label="item.label"
             :value="item.value"
@@ -55,18 +54,14 @@
         <el-date-picker
           v-model="dateRange"
           type="daterange"
-          range-separator="-"
+          range-separator="至"
           start-placeholder="开始日期"
           end-placeholder="结束日期"
           value-format="yyyy-MM-dd"
           style="width: 240px"
         />
       </el-form-item>
-      <el-form-item>
-        <el-button type="primary" icon="el-icon-search" size="mini" @click="handleQuery">搜索</el-button>
-        <el-button icon="el-icon-refresh" size="mini" @click="resetQuery">重置</el-button>
-      </el-form-item>
-    </el-form>
+    </search-form>
 
     <el-row :gutter="10" class="mb8">
       <el-col :span="1.5">
@@ -83,7 +78,7 @@
       </el-col>
       <el-col :span="1.5">
         <el-button
-          type="success"
+          type="primary"
           plain
           icon="el-icon-edit"
           size="mini"
@@ -96,7 +91,7 @@
       </el-col>
       <el-col :span="1.5">
         <el-button
-          type="danger"
+          type="primary"
           plain
           icon="el-icon-delete"
           size="mini"
@@ -110,13 +105,16 @@
       <right-toolbar :showSearch.sync="showSearch" @queryTable="getList" />
     </el-row>
 
-    <el-table
-      v-loading="loading"
+    <data-table
+      :loading="loading"
       :data="orderList"
+      :total="total"
+      :page.sync="queryParams.pageNum"
+      :limit.sync="queryParams.pageSize"
       empty-text="暂无临停订单数据"
       @selection-change="handleSelectionChange"
+      @pagination="getList"
     >
-      <el-table-column type="selection" width="55" align="center" />
       <el-table-column label="订单编号" align="center" prop="tempOrderId" width="90" />
       <el-table-column label="订单号" align="center" prop="orderNo" min-width="180" show-overflow-tooltip />
       <el-table-column label="停车场" align="center" prop="lotName" min-width="140" show-overflow-tooltip />
@@ -145,16 +143,12 @@
       </el-table-column>
       <el-table-column label="支付状态" align="center" width="100">
         <template slot-scope="scope">
-          <el-tag :type="payStatusTagType(scope.row.payStatus)">
-            {{ payStatusLabel(scope.row.payStatus) }}
-          </el-tag>
+          <dict-tag :options="dict.type.parking_temp_pay_status" :value="scope.row.payStatus" />
         </template>
       </el-table-column>
       <el-table-column label="业务状态" align="center" width="100">
         <template slot-scope="scope">
-          <el-tag :type="bizStatusTagType(scope.row.bizStatus)">
-            {{ bizStatusLabel(scope.row.bizStatus) }}
-          </el-tag>
+          <dict-tag :options="dict.type.parking_temp_biz_status" :value="scope.row.bizStatus" />
         </template>
       </el-table-column>
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width" width="240">
@@ -209,19 +203,10 @@
           </el-button>
         </template>
       </el-table-column>
-    </el-table>
+    </data-table>
 
-    <pagination
-      v-show="total > 0"
-      :total="total"
-      :page.sync="queryParams.pageNum"
-      :limit.sync="queryParams.pageSize"
-      @pagination="getList"
-    />
-
-    <!-- 支付确认对话框 -->
     <el-dialog title="确认支付" :visible.sync="settleOpen" width="400px" append-to-body @close="cancelSettle">
-      <el-form ref="settleForm" :model="settleForm" label-width="90px">
+      <el-form :model="settleForm" label-width="90px">
         <el-form-item label="订单号">
           <span>{{ settleForm.orderNo }}</span>
         </el-form-item>
@@ -231,7 +216,7 @@
       </el-form>
       <div slot="footer" class="dialog-footer">
         <el-button type="primary" :loading="settling" @click="submitSettle">确认已收款</el-button>
-        <el-button @click="cancelSettle">取 消</el-button>
+        <el-button @click="cancelSettle">取消</el-button>
       </div>
     </el-dialog>
   </div>
@@ -241,17 +226,13 @@
 import { listParkingLotOptions } from '@/api/parking/lot'
 import { listCustomerOptions } from '@/api/parking/customer'
 import { delTempOrder, entryTempOrder, exitTempOrder, listTempOrders, settleTempOrder } from '@/api/parking/tempOrder'
-import {
-  TEMP_ORDER_BIZ_STATUS_OPTIONS,
-  TEMP_ORDER_PAY_STATUS_OPTIONS,
-  findCustomerLabel,
-  findLabel,
-  findTagType,
-  formatCustomerOption
-} from '../options'
+import { findCustomerLabel, formatCustomerOption, formatPrice } from '../options'
+import { SearchForm, DataTable } from '../components'
 
 export default {
   name: 'ParkingTempOrder',
+  components: { SearchForm, DataTable },
+  dicts: ['parking_temp_pay_status', 'parking_temp_biz_status'],
   data() {
     return {
       loading: true,
@@ -266,8 +247,6 @@ export default {
       customerOptions: [],
       settleOpen: false,
       dateRange: [],
-      payStatusOptions: TEMP_ORDER_PAY_STATUS_OPTIONS,
-      bizStatusOptions: TEMP_ORDER_BIZ_STATUS_OPTIONS,
       queryParams: {
         pageNum: 1,
         pageSize: 10,
@@ -279,15 +258,7 @@ export default {
         inTimeStart: undefined,
         inTimeEnd: undefined
       },
-      settleForm: {},
-      settleRules: {
-        feeAmount: [
-          { type: 'number', min: 0, message: '金额不能为负数', trigger: 'blur' }
-        ],
-        discountAmount: [
-          { type: 'number', min: 0, message: '优惠金额不能为负数', trigger: 'blur' }
-        ]
-      }
+      settleForm: {}
     }
   },
   created() {
@@ -331,8 +302,7 @@ export default {
       this.queryParams.pageNum = 1
       this.getList()
     },
-    resetQuery() {
-      this.resetForm('queryForm')
+    resetDateRange() {
       this.dateRange = []
       this.handleQuery()
     },
@@ -349,7 +319,7 @@ export default {
       this.$router.push({ path: '/parking/temp/form', query: { id: tempOrderId } })
     },
     handleEntry(row) {
-      this.$modal.confirm('确认车辆「' + row.vehiclePlateNo + '」入场？').then(() => {
+      this.$modal.confirm('确认车辆"' + row.vehiclePlateNo + '"入场？').then(() => {
         return entryTempOrder(row.tempOrderId)
       }).then(() => {
         this.getList()
@@ -357,7 +327,7 @@ export default {
       }).catch(() => {})
     },
     handleExit(row) {
-      this.$modal.confirm('确认车辆「' + row.vehiclePlateNo + '」出场？出场后将自动计算费用。').then(() => {
+      this.$modal.confirm('确认车辆"' + row.vehiclePlateNo + '"出场？出场后将自动计算费用。').then(() => {
         return exitTempOrder(row.tempOrderId)
       }).then(() => {
         this.getList()
@@ -368,74 +338,36 @@ export default {
       this.settleForm = {
         tempOrderId: row.tempOrderId,
         orderNo: row.orderNo,
-        vehiclePlateNo: row.vehiclePlateNo,
-        feeAmount: 0,
-        discountAmount: 0
+        vehiclePlateNo: row.vehiclePlateNo
       }
       this.settleOpen = true
     },
     submitSettle() {
-      this.$refs.settleForm.validate(valid => {
-        if (!valid) return
-        this.settling = true
-        settleTempOrder(this.settleForm).then(() => {
-          this.$modal.msgSuccess('结算成功')
-          this.settleOpen = false
-          this.getList()
-        }).finally(() => {
-          this.settling = false
-        })
+      this.settling = true
+      settleTempOrder(this.settleForm).then(() => {
+        this.$modal.msgSuccess('结算成功')
+        this.settleOpen = false
+        this.getList()
+      }).finally(() => {
+        this.settling = false
       })
     },
     handleDelete(row) {
       const tempOrderIds = row.tempOrderId || this.ids
-      this.$modal.confirm('是否确认删除临停订单编号为"' + tempOrderIds + '"的数据项？').then(() => {
+      this.$modal.confirm('是否确认删除临停订单编号为 "' + tempOrderIds + '" 的数据项？').then(() => {
         return delTempOrder(tempOrderIds)
       }).then(() => {
         this.getList()
         this.$modal.msgSuccess('删除成功')
       }).catch(() => {})
     },
-    formatPrice(value) {
-      const num = Number(value)
-      if (Number.isNaN(num)) {
-        return '0.00'
-      }
-      return num.toFixed(2)
-    },
+    formatPrice,
     formatCustomerOption(item) {
       return formatCustomerOption(item)
     },
     customerLabel(customerId) {
       return findCustomerLabel(this.customerOptions, customerId)
-    },
-    payStatusLabel(status) {
-      return findLabel(TEMP_ORDER_PAY_STATUS_OPTIONS, status)
-    },
-    payStatusTagType(status) {
-      return findTagType(TEMP_ORDER_PAY_STATUS_OPTIONS, status)
-    },
-    bizStatusLabel(status) {
-      return findLabel(TEMP_ORDER_BIZ_STATUS_OPTIONS, status)
-    },
-    bizStatusTagType(status) {
-      return findTagType(TEMP_ORDER_BIZ_STATUS_OPTIONS, status)
     }
   }
 }
 </script>
-
-<style scoped>
-.page-title {
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 12px;
-  color: #303133;
-}
-
-.form-tip {
-  margin-left: 8px;
-  color: #909399;
-  font-size: 12px;
-}
-</style>

@@ -159,7 +159,7 @@ import { mapGetters } from 'vuex'
 import { getParkingOverviewStats, getParkingRecentOrders } from '@/api/parking/overview'
 import { getQuickConfig, saveQuickConfig as apiSaveQuickConfig } from '@/api/parking/userConfig'
 import { listParkingLots } from '@/api/parking/lot'
-import { LOT_STATUS_OPTIONS, findLabel, findTagType } from './options'
+import { findLabel, findTagType } from './options'
 
 const QUICK_COLORS = ['primary', 'success', 'danger', 'warning', 'info']
 
@@ -194,6 +194,7 @@ const EMPTY_STATS = {
 
 export default {
   name: 'ParkingOverview',
+  dicts: ['parking_payment_status'],
   data() {
     return {
       loading: false,
@@ -559,16 +560,11 @@ export default {
       if (pct >= 70) return '#e6a23c'
       return '#67c23a'
     },
-    lotStatusLabel(status) { return findLabel(LOT_STATUS_OPTIONS, status) },
-    lotStatusTagType(status) { return findTagType(LOT_STATUS_OPTIONS, status) },
     recentOrderTypeLabel(v) { return findLabel(RECENT_ORDER_TYPE_OPTIONS, v) },
     recentOrderTypeTag(v) { return findTagType(RECENT_ORDER_TYPE_OPTIONS, v) },
-    recentPayStatusLabel(v) { return findLabel(RECENT_PAY_STATUS_OPTIONS, v) },
+    recentPayStatusLabel(v) { return findLabel(this.dict.type.parking_payment_status, v) },
     recentPayStatusTag(v) { return findTagType(RECENT_PAY_STATUS_OPTIONS, v) },
-    formatAmount(v) {
-      const n = Number(v)
-      return Number.isNaN(n) ? '0.00' : n.toFixed(2)
-    },
+
     goLotPage() { this.$router.push({ path: '/archives/lot' }) },
     goSpacePage() { this.$router.push({ path: '/archives/space' }) },
     goTempPage() { this.$router.push({ path: '/operations/temp' }) },

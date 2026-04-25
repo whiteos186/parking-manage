@@ -11,6 +11,28 @@ NProgress.configure({ showSpinner: false })
 
 const whiteList = ['/login', '/register']
 
+/**
+ * Walk the sidebar router tree to find the first leaf route path.
+ * Used to redirect customer-role users away from pages they cannot access.
+ */
+function resolveFirstRoute(routes) {
+  if (!routes || routes.length === 0) return null
+  for (const route of routes) {
+    if (route.hidden) continue
+    if (route.children && route.children.length > 0) {
+      const child = resolveFirstRoute(route.children)
+      if (child) {
+        if (child.startsWith('/')) return child
+        const parentPath = route.path || ''
+        return parentPath ? `/${parentPath}/${child}`.replace(/\/+/g, '/') : child
+      }
+    } else if (route.path) {
+      return route.path
+    }
+  }
+  return null
+}
+
 const isWhiteList = (path) => {
   return whiteList.some(pattern => isPathMatch(pattern, path))
 }
@@ -41,6 +63,17 @@ router.beforeEach((to, from, next) => {
           store.dispatch('GenerateRoutes').then(accessRoutes => {
             // 根据roles权限生成可访问的路由表
             router.addRoutes(accessRoutes) // 动态添加可访问路由表
+            // Customer role does not have overview access; redirect to first available page
+            if (to.path === '/' || to.path === '/parking') {
+              const roles = store.getters.roles
+              if (roles.includes('customer')) {
+                const firstRoute = resolveFirstRoute(store.getters.sidebarRouters)
+                if (firstRoute && firstRoute !== '/parking') {
+                  next({ path: firstRoute, replace: true })
+                  return
+                }
+              }
+            }
             next({ ...to, replace: true }) // hack方法 确保addRoutes已完成
           })
         }).catch(err => {
@@ -50,6 +83,15 @@ router.beforeEach((to, from, next) => {
             })
           })
       } else {
+        // Customer role does not have overview access; redirect to first available page
+        const roles = store.getters.roles
+        if (roles.includes('customer') && (to.path === '/' || to.path === '/parking')) {
+          const firstRoute = resolveFirstRoute(store.getters.sidebarRouters)
+          if (firstRoute && firstRoute !== '/parking') {
+            next({ path: firstRoute, replace: true })
+            return
+          }
+        }
         next()
       }
     }

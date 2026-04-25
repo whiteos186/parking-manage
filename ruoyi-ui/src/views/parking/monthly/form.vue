@@ -1,104 +1,103 @@
 <template>
-  <div class="app-container">
-    <el-page-header @back="goBack" :content="isEdit ? '修改月卡订单' : '新增月卡订单'" style="margin-bottom: 20px" />
-    <el-card>
-      <el-form ref="form" :model="form" :rules="rules" label-width="100px" v-loading="loading">
-        <el-form-item label="所属停车场" prop="lotId">
-          <el-select v-model="form.lotId" placeholder="请选择停车场" style="width: 360px">
-            <el-option
-              v-for="item in lotOptions"
-              :key="item.lotId"
-              :label="item.lotName"
-              :value="item.lotId"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="客户" prop="customerId">
-          <el-select v-model="form.customerId" filterable placeholder="请选择客户" style="width: 360px" @change="handleCustomerChange">
-            <el-option
-              v-for="item in customerOptions"
-              :key="item.customerId"
-              :label="formatCustomerOption(item)"
-              :value="item.customerId"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="车辆" prop="vehicleId">
-          <el-select
-            v-model="form.vehicleId"
-            filterable
-            clearable
-            :disabled="!form.customerId"
-            :placeholder="form.customerId ? '请选择车辆' : '请先选择客户'"
-            style="width: 360px"
-          >
-            <el-option
-              v-for="item in vehicleOptions"
-              :key="item.vehicleId"
-              :label="formatVehicleOption(item)"
-              :value="item.vehicleId"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="购买月数" prop="monthCount">
-          <el-input-number
-            v-model="form.monthCount"
-            :min="1"
-            :precision="0"
-            controls-position="right"
-            style="width: 200px"
-          />
-          <span class="form-tip">个月</span>
-        </el-form-item>
-        <el-form-item label="开始时间" prop="startTime">
-          <el-date-picker
-            v-model="form.startTime"
-            type="datetime"
-            placeholder="默认为当前时间"
-            value-format="yyyy-MM-dd HH:mm:ss"
-            style="width: 360px"
-          />
-        </el-form-item>
-        <el-form-item label="原始金额" prop="originalAmount">
-          <el-input-number
-            v-model="form.originalAmount"
-            :min="0"
-            :precision="2"
-            :step="100"
-            controls-position="right"
-            style="width: 200px"
-          />
-          <span class="form-tip">元</span>
-        </el-form-item>
-        <el-form-item label="折扣金额" prop="discountAmount">
-          <el-input-number
-            v-model="form.discountAmount"
-            :min="0"
-            :precision="2"
-            :step="10"
-            controls-position="right"
-            style="width: 200px"
-          />
-          <span class="form-tip">元</span>
-        </el-form-item>
-        <el-form-item label="备注" prop="remark">
-          <el-input
-            v-model="form.remark"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入备注"
-            maxlength="500"
-            show-word-limit
-            style="width: 360px"
-          />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" :loading="submitting" @click="submitForm">确 定</el-button>
-          <el-button @click="goBack">取 消</el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
-  </div>
+  <form-page
+    :title="isEdit ? '修改月卡订单' : '新增月卡订单'"
+    :model="form"
+    :rules="rules"
+    :loading="loading"
+    :submitting="submitting"
+    @submit="submitForm"
+    @back="goBack"
+  >
+    <el-form-item label="所属停车场" prop="lotId">
+      <el-select v-model="form.lotId" placeholder="请选择停车场" style="width: 360px">
+        <el-option
+          v-for="item in lotOptions"
+          :key="item.lotId"
+          :label="item.lotName"
+          :value="item.lotId"
+        />
+      </el-select>
+    </el-form-item>
+    <el-form-item label="客户" prop="customerId">
+      <el-select v-model="form.customerId" filterable placeholder="请选择客户" style="width: 360px" @change="handleCustomerChange">
+        <el-option
+          v-for="item in customerOptions"
+          :key="item.customerId"
+          :label="formatCustomerOption(item)"
+          :value="item.customerId"
+        />
+      </el-select>
+    </el-form-item>
+    <el-form-item label="车辆" prop="vehicleId">
+      <el-select
+        v-model="form.vehicleId"
+        filterable
+        clearable
+        :disabled="!form.customerId"
+        :placeholder="form.customerId ? '请选择车辆' : '请先选择客户'"
+        style="width: 360px"
+      >
+        <el-option
+          v-for="item in vehicleOptions"
+          :key="item.vehicleId"
+          :label="formatVehicleOption(item)"
+          :value="item.vehicleId"
+        />
+      </el-select>
+    </el-form-item>
+    <el-form-item label="购买月数" prop="monthCount">
+      <el-input-number
+        v-model="form.monthCount"
+        :min="1"
+        :precision="0"
+        controls-position="right"
+        style="width: 200px"
+      />
+      <span class="form-tip">个月</span>
+    </el-form-item>
+    <el-form-item label="开始时间" prop="startTime">
+      <el-date-picker
+        v-model="form.startTime"
+        type="datetime"
+        placeholder="默认为当前时间"
+        value-format="yyyy-MM-dd HH:mm:ss"
+        style="width: 360px"
+      />
+    </el-form-item>
+    <el-form-item label="原始金额" prop="originalAmount">
+      <el-input-number
+        v-model="form.originalAmount"
+        :min="0"
+        :precision="2"
+        :step="100"
+        controls-position="right"
+        style="width: 200px"
+      />
+      <span class="form-tip">元</span>
+    </el-form-item>
+    <el-form-item label="折扣金额" prop="discountAmount">
+      <el-input-number
+        v-model="form.discountAmount"
+        :min="0"
+        :precision="2"
+        :step="10"
+        controls-position="right"
+        style="width: 200px"
+      />
+      <span class="form-tip">元</span>
+    </el-form-item>
+    <el-form-item label="备注" prop="remark">
+      <el-input
+        v-model="form.remark"
+        type="textarea"
+        :rows="3"
+        placeholder="请输入备注"
+        maxlength="500"
+        show-word-limit
+        style="width: 360px"
+      />
+    </el-form-item>
+  </form-page>
 </template>
 
 <script>
@@ -107,9 +106,11 @@ import { listCustomerOptions } from '@/api/parking/customer'
 import { listVehicleOptions } from '@/api/parking/vehicle'
 import { addMonthlyOrder, getMonthlyOrder, updateMonthlyOrder } from '@/api/parking/monthlyOrder'
 import { formatCustomerOption, formatVehicleOption } from '../options'
+import { FormPage } from '../components'
 
 export default {
   name: 'MonthlyOrderForm',
+  components: { FormPage },
   data() {
     return {
       loading: false,
@@ -191,16 +192,13 @@ export default {
       this.$router.go(-1)
     },
     submitForm() {
-      this.$refs.form.validate(valid => {
-        if (!valid) return
-        this.submitting = true
-        const req = this.isEdit ? updateMonthlyOrder(this.form) : addMonthlyOrder(this.form)
-        req.then(() => {
-          this.$modal.msgSuccess(this.isEdit ? '修改成功' : '新增成功')
-          this.goBack()
-        }).finally(() => {
-          this.submitting = false
-        })
+      this.submitting = true
+      const req = this.isEdit ? updateMonthlyOrder(this.form) : addMonthlyOrder(this.form)
+      req.then(() => {
+        this.$modal.msgSuccess(this.isEdit ? '修改成功' : '新增成功')
+        this.goBack()
+      }).finally(() => {
+        this.submitting = false
       })
     },
     formatCustomerOption(item) {

@@ -1,18 +1,17 @@
 <template>
   <div class="app-container">
-    <div class="page-title">月卡订单管理</div>
-    <el-form ref="queryForm" :model="queryParams" size="small" :inline="true" v-show="showSearch">
+    <search-form :model="queryParams" :visible="showSearch" @search="handleQuery" @reset="handleQuery">
       <el-form-item label="订单编号" prop="orderNo">
         <el-input
           v-model="queryParams.orderNo"
           placeholder="请输入订单编号"
           clearable
-          style="width: 220px"
+          style="width: 200px"
           @keyup.enter.native="handleQuery"
         />
       </el-form-item>
       <el-form-item label="所属停车场" prop="lotId">
-        <el-select v-model="queryParams.lotId" clearable placeholder="请选择停车场">
+        <el-select v-model="queryParams.lotId" clearable placeholder="请选择停车场" style="width: 160px">
           <el-option
             v-for="item in lotOptions"
             :key="item.lotId"
@@ -32,9 +31,9 @@
         </el-select>
       </el-form-item>
       <el-form-item label="支付状态" prop="payStatus">
-        <el-select v-model="queryParams.payStatus" clearable placeholder="请选择支付状态">
+        <el-select v-model="queryParams.payStatus" clearable placeholder="请选择支付状态" style="width: 160px">
           <el-option
-            v-for="item in payStatusOptions"
+            v-for="item in dict.type.parking_monthly_pay_status"
             :key="item.value"
             :label="item.label"
             :value="item.value"
@@ -42,20 +41,16 @@
         </el-select>
       </el-form-item>
       <el-form-item label="业务状态" prop="bizStatus">
-        <el-select v-model="queryParams.bizStatus" clearable placeholder="请选择业务状态">
+        <el-select v-model="queryParams.bizStatus" clearable placeholder="请选择业务状态" style="width: 160px">
           <el-option
-            v-for="item in bizStatusOptions"
+            v-for="item in dict.type.parking_monthly_biz_status"
             :key="item.value"
             :label="item.label"
             :value="item.value"
           />
         </el-select>
       </el-form-item>
-      <el-form-item>
-        <el-button type="primary" icon="el-icon-search" size="mini" @click="handleQuery">搜索</el-button>
-        <el-button icon="el-icon-refresh" size="mini" @click="resetQuery">重置</el-button>
-      </el-form-item>
-    </el-form>
+    </search-form>
 
     <el-row :gutter="10" class="mb8">
       <el-col :span="1.5">
@@ -72,7 +67,7 @@
       </el-col>
       <el-col :span="1.5">
         <el-button
-          type="success"
+          type="primary"
           plain
           icon="el-icon-edit"
           size="mini"
@@ -85,7 +80,7 @@
       </el-col>
       <el-col :span="1.5">
         <el-button
-          type="danger"
+          type="primary"
           plain
           icon="el-icon-delete"
           size="mini"
@@ -99,13 +94,16 @@
       <right-toolbar :showSearch.sync="showSearch" @queryTable="getList" />
     </el-row>
 
-    <el-table
-      v-loading="loading"
+    <data-table
+      :loading="loading"
       :data="orderList"
+      :total="total"
+      :page.sync="queryParams.pageNum"
+      :limit.sync="queryParams.pageSize"
       empty-text="暂无月卡订单数据"
       @selection-change="handleSelectionChange"
+      @pagination="getList"
     >
-      <el-table-column type="selection" width="55" align="center" />
       <el-table-column label="订单编号" align="center" prop="orderNo" min-width="180" show-overflow-tooltip />
       <el-table-column label="停车场" align="center" prop="lotName" min-width="140" show-overflow-tooltip />
       <el-table-column label="客户" align="center" min-width="220">
@@ -113,6 +111,7 @@
           {{ customerLabel(scope.row.customerId) }}
         </template>
       </el-table-column>
+      <el-table-column label="车牌号" align="center" prop="vehiclePlateNo" width="120" show-overflow-tooltip />
       <el-table-column label="购买月数" align="center" prop="monthCount" width="90" />
       <el-table-column label="开始时间" align="center" prop="startTime" width="160">
         <template slot-scope="scope">
@@ -125,20 +124,16 @@
         </template>
       </el-table-column>
       <el-table-column label="应付金额" align="center" prop="payAmount" width="100">
-        <template slot-scope="scope">¥{{ formatAmount(scope.row.payAmount) }}</template>
+        <template slot-scope="scope">¥{{ formatPrice(scope.row.payAmount) }}</template>
       </el-table-column>
       <el-table-column label="支付状态" align="center" width="100">
         <template slot-scope="scope">
-          <el-tag :type="payStatusTagType(scope.row.payStatus)">
-            {{ payStatusLabel(scope.row.payStatus) }}
-          </el-tag>
+          <dict-tag :options="dict.type.parking_monthly_pay_status" :value="scope.row.payStatus" />
         </template>
       </el-table-column>
       <el-table-column label="业务状态" align="center" width="100">
         <template slot-scope="scope">
-          <el-tag :type="bizStatusTagType(scope.row.bizStatus)">
-            {{ bizStatusLabel(scope.row.bizStatus) }}
-          </el-tag>
+          <dict-tag :options="dict.type.parking_monthly_biz_status" :value="scope.row.bizStatus" />
         </template>
       </el-table-column>
       <el-table-column label="创建时间" align="center" prop="createTime" width="160">
@@ -188,15 +183,7 @@
           </el-button>
         </template>
       </el-table-column>
-    </el-table>
-
-    <pagination
-      v-show="total > 0"
-      :total="total"
-      :page.sync="queryParams.pageNum"
-      :limit.sync="queryParams.pageSize"
-      @pagination="getList"
-    />
+    </data-table>
   </div>
 </template>
 
@@ -204,23 +191,14 @@
 import { listParkingLotOptions } from '@/api/parking/lot'
 import { listCustomerOptions } from '@/api/parking/customer'
 import { listVehicleOptions } from '@/api/parking/vehicle'
-import {
-  cancelMonthlyOrder,
-  delMonthlyOrder,
-  listMonthlyOrders,
-  payMonthlyOrder
-} from '@/api/parking/monthlyOrder'
-import {
-  MONTHLY_ORDER_BIZ_STATUS_OPTIONS,
-  MONTHLY_ORDER_PAY_STATUS_OPTIONS,
-  findCustomerLabel,
-  findLabel,
-  findTagType,
-  formatCustomerOption
-} from '../options'
+import { cancelMonthlyOrder, delMonthlyOrder, listMonthlyOrders, payMonthlyOrder } from '@/api/parking/monthlyOrder'
+import { findCustomerLabel, formatCustomerOption, formatPrice } from '../options'
+import { SearchForm, DataTable } from '../components'
 
 export default {
   name: 'ParkingMonthlyOrder',
+  components: { SearchForm, DataTable },
+  dicts: ['parking_monthly_pay_status', 'parking_monthly_biz_status'],
   data() {
     return {
       loading: true,
@@ -233,8 +211,6 @@ export default {
       lotOptions: [],
       customerOptions: [],
       vehicleOptions: [],
-      payStatusOptions: MONTHLY_ORDER_PAY_STATUS_OPTIONS,
-      bizStatusOptions: MONTHLY_ORDER_BIZ_STATUS_OPTIONS,
       queryParams: {
         pageNum: 1,
         pageSize: 10,
@@ -281,10 +257,6 @@ export default {
       this.queryParams.pageNum = 1
       this.getList()
     },
-    resetQuery() {
-      this.resetForm('queryForm')
-      this.handleQuery()
-    },
     handleAdd() {
       this.$router.push('/parking/monthly/form')
     },
@@ -299,7 +271,7 @@ export default {
     },
     handleDelete(row) {
       const monthlyOrderIds = row.monthlyOrderId || this.ids
-      this.$modal.confirm('是否确认删除月卡订单编号为"' + monthlyOrderIds + '"的数据项？').then(() => {
+      this.$modal.confirm('是否确认删除月卡订单编号为 "' + monthlyOrderIds + '" 的数据项？').then(() => {
         return delMonthlyOrder(monthlyOrderIds)
       }).then(() => {
         this.getList()
@@ -307,7 +279,7 @@ export default {
       }).catch(() => {})
     },
     handlePay(row) {
-      this.$modal.confirm('是否确认支付月卡订单"' + row.orderNo + '"？').then(() => {
+      this.$modal.confirm('是否确认支付月卡订单 "' + row.orderNo + '"？').then(() => {
         return payMonthlyOrder({ monthlyOrderId: row.monthlyOrderId })
       }).then(() => {
         this.getList()
@@ -315,47 +287,20 @@ export default {
       }).catch(() => {})
     },
     handleCancel(row) {
-      this.$modal.confirm('是否确认取消月卡订单"' + row.orderNo + '"？').then(() => {
+      this.$modal.confirm('是否确认取消月卡订单 "' + row.orderNo + '"？').then(() => {
         return cancelMonthlyOrder({ monthlyOrderId: row.monthlyOrderId })
       }).then(() => {
         this.getList()
         this.$modal.msgSuccess('取消成功')
       }).catch(() => {})
     },
-    formatAmount(value) {
-      const num = Number(value)
-      if (Number.isNaN(num)) {
-        return '0.00'
-      }
-      return num.toFixed(2)
-    },
+    formatPrice,
     formatCustomerOption(item) {
       return formatCustomerOption(item)
     },
     customerLabel(customerId) {
       return findCustomerLabel(this.customerOptions, customerId)
-    },
-    payStatusLabel(status) {
-      return findLabel(MONTHLY_ORDER_PAY_STATUS_OPTIONS, status)
-    },
-    payStatusTagType(status) {
-      return findTagType(MONTHLY_ORDER_PAY_STATUS_OPTIONS, status)
-    },
-    bizStatusLabel(status) {
-      return findLabel(MONTHLY_ORDER_BIZ_STATUS_OPTIONS, status)
-    },
-    bizStatusTagType(status) {
-      return findTagType(MONTHLY_ORDER_BIZ_STATUS_OPTIONS, status)
     }
   }
 }
 </script>
-
-<style scoped>
-.page-title {
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 12px;
-  color: #303133;
-}
-</style>

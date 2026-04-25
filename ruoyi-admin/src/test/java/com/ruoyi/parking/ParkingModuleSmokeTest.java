@@ -62,13 +62,13 @@ class ParkingModuleSmokeTest
         assertTrue(packageJson.contains("停车场管理系统"), "Expected package metadata to use parking system branding");
 
         String lotVue = readProjectFile("ruoyi-ui/src/views/parking/lot/index.vue");
-        assertTrue(lotVue.contains("\u505c\u8f66\u573a\u7ba1\u7406"), "Expected lot management page to use Chinese title");
+        assertTrue(lotVue.contains("\u505c\u8f66\u573a\u540d\u79f0"), "Expected lot management page to use Chinese labels");
         assertTrue(lotVue.contains("v-hasPermi=\"['parking:lot:add']\""), "Expected lot add permission button");
         assertTrue(lotVue.contains("v-hasPermi=\"['parking:lot:edit']\""), "Expected lot edit permission button");
         assertTrue(lotVue.contains("v-hasPermi=\"['parking:lot:remove']\""), "Expected lot remove permission button");
 
         String spaceVue = readProjectFile("ruoyi-ui/src/views/parking/space/index.vue");
-        assertTrue(spaceVue.contains("\u8f66\u4f4d\u7ba1\u7406"), "Expected space management page to use Chinese title");
+        assertTrue(spaceVue.contains("\u8f66\u4f4d\u7f16\u7801"), "Expected space management page to use Chinese labels");
         assertTrue(spaceVue.contains("v-hasPermi=\"['parking:space:add']\""), "Expected space add permission button");
         assertTrue(spaceVue.contains("v-hasPermi=\"['parking:space:edit']\""), "Expected space edit permission button");
         assertTrue(spaceVue.contains("v-hasPermi=\"['parking:space:remove']\""), "Expected space remove permission button");
@@ -120,7 +120,7 @@ class ParkingModuleSmokeTest
         assertTrue(customerVue.contains("v-hasPermi=\"['parking:customer:remove']\""), "Expected customer remove permission button");
 
         String vehicleVue = readProjectFile("ruoyi-ui/src/views/parking/vehicle/index.vue");
-        assertTrue(vehicleVue.contains("\u7528\u6237\u8f66\u8f86"), "Expected user vehicle page to use Chinese title");
+        assertTrue(vehicleVue.contains("\u8f66\u724c\u53f7"), "Expected user vehicle page to use Chinese labels");
         assertTrue(vehicleVue.contains("v-hasPermi=\"['parking:vehicle:add']\""), "Expected vehicle add permission button");
         assertTrue(vehicleVue.contains("v-hasPermi=\"['parking:vehicle:edit']\""), "Expected vehicle edit permission button");
         assertTrue(vehicleVue.contains("v-hasPermi=\"['parking:vehicle:remove']\""), "Expected vehicle remove permission button");

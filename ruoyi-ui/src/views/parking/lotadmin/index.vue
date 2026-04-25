@@ -1,9 +1,8 @@
 <template>
   <div class="app-container">
-    <div class="page-title">停车场管理员绑定</div>
-    <el-form ref="queryForm" :model="queryParams" size="small" :inline="true" v-show="showSearch">
+    <search-form :model="queryParams" :visible="showSearch" @search="handleQuery" @reset="handleQuery">
       <el-form-item label="所属停车场" prop="lotId">
-        <el-select v-model="queryParams.lotId" clearable placeholder="请选择停车场">
+        <el-select v-model="queryParams.lotId" clearable placeholder="请选择停车场" style="width: 160px">
           <el-option
             v-for="item in lotOptions"
             :key="item.lotId"
@@ -18,7 +17,7 @@
           clearable
           filterable
           placeholder="请选择用户"
-          style="width: 220px"
+          style="width: 280px"
         >
           <el-option
             v-for="item in userOptions"
@@ -29,20 +28,16 @@
         </el-select>
       </el-form-item>
       <el-form-item label="状态" prop="status">
-        <el-select v-model="queryParams.status" clearable placeholder="请选择状态">
+        <el-select v-model="queryParams.status" clearable placeholder="请选择状态" style="width: 160px">
           <el-option
-            v-for="item in lotAdminStatusOptions"
+            v-for="item in dict.type.parking_lot_admin_status"
             :key="item.value"
             :label="item.label"
             :value="item.value"
           />
         </el-select>
       </el-form-item>
-      <el-form-item>
-        <el-button type="primary" icon="el-icon-search" size="mini" @click="handleQuery">搜索</el-button>
-        <el-button icon="el-icon-refresh" size="mini" @click="resetQuery">重置</el-button>
-      </el-form-item>
-    </el-form>
+    </search-form>
 
     <el-row :gutter="10" class="mb8">
       <el-col :span="1.5">
@@ -59,7 +54,7 @@
       </el-col>
       <el-col :span="1.5">
         <el-button
-          type="success"
+          type="primary"
           plain
           icon="el-icon-edit"
           size="mini"
@@ -72,7 +67,7 @@
       </el-col>
       <el-col :span="1.5">
         <el-button
-          type="danger"
+          type="primary"
           plain
           icon="el-icon-delete"
           size="mini"
@@ -86,13 +81,16 @@
       <right-toolbar :showSearch.sync="showSearch" @queryTable="getList" />
     </el-row>
 
-    <el-table
-      v-loading="loading"
+    <data-table
+      :loading="loading"
       :data="lotAdminList"
+      :total="total"
+      :page.sync="queryParams.pageNum"
+      :limit.sync="queryParams.pageSize"
       empty-text="暂无绑定数据"
       @selection-change="handleSelectionChange"
+      @pagination="getList"
     >
-      <el-table-column type="selection" width="55" align="center" />
       <el-table-column label="绑定编号" align="center" prop="lotAdminId" width="110" />
       <el-table-column label="停车场名称" align="center" prop="lotName" min-width="160" show-overflow-tooltip />
       <el-table-column label="用户编号" align="center" prop="userId" width="110" />
@@ -100,9 +98,7 @@
       <el-table-column label="用户昵称" align="center" prop="nickName" min-width="140" show-overflow-tooltip />
       <el-table-column label="状态" align="center" width="90">
         <template slot-scope="scope">
-          <el-tag :type="lotAdminStatusTagType(scope.row.status)">
-            {{ lotAdminStatusLabel(scope.row.status) }}
-          </el-tag>
+          <dict-tag :options="dict.type.parking_lot_admin_status" :value="scope.row.status" />
         </template>
       </el-table-column>
       <el-table-column label="创建时间" align="center" prop="createTime" width="170">
@@ -132,70 +128,65 @@
           </el-button>
         </template>
       </el-table-column>
-    </el-table>
+    </data-table>
 
-    <pagination
-      v-show="total > 0"
-      :total="total"
-      :page.sync="queryParams.pageNum"
-      :limit.sync="queryParams.pageSize"
-      @pagination="getList"
-    />
-
-    <el-dialog :title="title" :visible.sync="open" width="480px" append-to-body @close="cancel">
-      <el-form ref="form" :model="form" :rules="rules" label-width="100px">
-        <el-form-item label="所属停车场" prop="lotId">
-          <el-select v-model="form.lotId" placeholder="请选择停车场" style="width: 100%">
-            <el-option
-              v-for="item in lotOptions"
-              :key="item.lotId"
-              :label="item.lotName"
-              :value="item.lotId"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="用户" prop="userId">
-          <el-select
-            v-model="form.userId"
-            filterable
-            placeholder="请选择用户"
-            style="width: 100%"
-          >
-            <el-option
-              v-for="item in userOptions"
-              :key="item.userId"
-              :label="userOptionLabel(item)"
-              :value="item.userId"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="状态" prop="status">
-          <el-radio-group v-model="form.status">
-            <el-radio
-              v-for="item in lotAdminStatusOptions"
-              :key="item.value"
-              :label="item.value"
-            >
-              {{ item.label }}
-            </el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="备注" prop="remark">
-          <el-input
-            v-model="form.remark"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入备注"
-            maxlength="500"
-            show-word-limit
+    <form-dialog
+      :open.sync="open"
+      :title="title"
+      width="480px"
+      :model="form"
+      :rules="rules"
+      :submitting="submitting"
+      @submit="submitForm"
+      @cancel="reset"
+    >
+      <el-form-item label="所属停车场" prop="lotId">
+        <el-select v-model="form.lotId" placeholder="请选择停车场" style="width: 100%">
+          <el-option
+            v-for="item in lotOptions"
+            :key="item.lotId"
+            :label="item.lotName"
+            :value="item.lotId"
           />
-        </el-form-item>
-      </el-form>
-      <div slot="footer" class="dialog-footer">
-        <el-button type="primary" :loading="submitting" @click="submitForm">确 定</el-button>
-        <el-button @click="cancel">取 消</el-button>
-      </div>
-    </el-dialog>
+        </el-select>
+      </el-form-item>
+      <el-form-item label="用户" prop="userId">
+        <el-select
+          v-model="form.userId"
+          filterable
+          placeholder="请选择用户"
+          style="width: 100%"
+        >
+          <el-option
+            v-for="item in userOptions"
+            :key="item.userId"
+            :label="userOptionLabel(item)"
+            :value="item.userId"
+          />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="状态" prop="status">
+        <el-radio-group v-model="form.status">
+          <el-radio
+            v-for="item in dict.type.parking_lot_admin_status"
+            :key="item.value"
+            :label="item.value"
+          >
+            {{ item.label }}
+          </el-radio>
+        </el-radio-group>
+      </el-form-item>
+      <el-form-item label="备注" prop="remark">
+        <el-input
+          v-model="form.remark"
+          type="textarea"
+          :rows="3"
+          placeholder="请输入备注"
+          maxlength="500"
+          show-word-limit
+        />
+      </el-form-item>
+    </form-dialog>
   </div>
 </template>
 
@@ -209,10 +200,12 @@ import {
   listLotAdminUserOptions,
   updateLotAdmin
 } from '@/api/parking/lotAdmin'
-import { LOT_ADMIN_STATUS_OPTIONS, findLabel, findTagType } from '../options'
+import { SearchForm, DataTable, FormDialog } from '../components'
 
 export default {
   name: 'ParkingLotAdmin',
+  components: { SearchForm, DataTable, FormDialog },
+  dicts: ['parking_lot_admin_status'],
   data() {
     return {
       loading: true,
@@ -227,7 +220,6 @@ export default {
       userOptions: [],
       title: '',
       open: false,
-      lotAdminStatusOptions: LOT_ADMIN_STATUS_OPTIONS,
       queryParams: {
         pageNum: 1,
         pageSize: 10,
@@ -241,7 +233,7 @@ export default {
           { required: true, message: '所属停车场不能为空', trigger: 'change' }
         ],
         userId: [
-          { required: true, message: '用户编号不能为空', trigger: 'blur' }
+          { required: true, message: '用户不能为空', trigger: 'change' }
         ],
         status: [
           { required: true, message: '状态不能为空', trigger: 'change' }
@@ -271,8 +263,8 @@ export default {
       if (!item) {
         return ''
       }
-      const nick = item.nickName || item.userName || ''
-      return nick + '（' + item.userName + '#' + item.userId + '）'
+      const nickName = item.nickName || item.userName || ''
+      return `${nickName}（${item.userName} #${item.userId}）`
     },
     getList() {
       this.loading = true
@@ -283,10 +275,6 @@ export default {
         this.loading = false
       })
     },
-    cancel() {
-      this.open = false
-      this.reset()
-    },
     reset() {
       this.form = {
         lotAdminId: undefined,
@@ -295,15 +283,10 @@ export default {
         status: '0',
         remark: undefined
       }
-      this.resetForm('form')
     },
     handleQuery() {
       this.queryParams.pageNum = 1
       this.getList()
-    },
-    resetQuery() {
-      this.resetForm('queryForm')
-      this.handleQuery()
     },
     handleAdd() {
       this.reset()
@@ -325,45 +308,25 @@ export default {
       })
     },
     submitForm() {
-      this.$refs.form.validate(valid => {
-        if (!valid) {
-          return
-        }
-        this.submitting = true
-        const request = this.form.lotAdminId ? updateLotAdmin(this.form) : addLotAdmin(this.form)
-        request.then(() => {
-          this.$modal.msgSuccess(this.form.lotAdminId ? '修改成功' : '新增成功')
-          this.open = false
-          this.getList()
-        }).finally(() => {
-          this.submitting = false
-        })
+      this.submitting = true
+      const request = this.form.lotAdminId ? updateLotAdmin(this.form) : addLotAdmin(this.form)
+      request.then(() => {
+        this.$modal.msgSuccess(this.form.lotAdminId ? '修改成功' : '新增成功')
+        this.open = false
+        this.getList()
+      }).finally(() => {
+        this.submitting = false
       })
     },
     handleDelete(row) {
       const lotAdminIds = row.lotAdminId || this.ids
-      this.$modal.confirm('是否确认删除管理员绑定编号为"' + lotAdminIds + '"的数据项？').then(() => {
+      this.$modal.confirm('是否确认删除管理员绑定编号为 "' + lotAdminIds + '" 的数据项？').then(() => {
         return delLotAdmin(lotAdminIds)
       }).then(() => {
         this.getList()
         this.$modal.msgSuccess('删除成功')
       }).catch(() => {})
-    },
-    lotAdminStatusLabel(status) {
-      return findLabel(LOT_ADMIN_STATUS_OPTIONS, status)
-    },
-    lotAdminStatusTagType(status) {
-      return findTagType(LOT_ADMIN_STATUS_OPTIONS, status)
     }
   }
 }
 </script>
-
-<style scoped>
-.page-title {
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 12px;
-  color: #303133;
-}
-</style>

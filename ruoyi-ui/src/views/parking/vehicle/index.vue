@@ -1,7 +1,6 @@
 <template>
   <div class="app-container">
-    <div class="page-title">用户车辆管理</div>
-    <el-form ref="queryForm" :model="queryParams" size="small" :inline="true" v-show="showSearch">
+    <search-form :model="queryParams" :visible="showSearch" @search="handleQuery" @reset="handleQuery">
       <el-form-item label="客户" prop="customerId">
         <el-select v-model="queryParams.customerId" clearable filterable placeholder="请选择客户" style="width: 280px">
           <el-option
@@ -17,14 +16,14 @@
           v-model="queryParams.plateNo"
           placeholder="请输入车牌号"
           clearable
-          style="width: 180px"
+          style="width: 200px"
           @keyup.enter.native="handleQuery"
         />
       </el-form-item>
       <el-form-item label="车辆类型" prop="vehicleType">
-        <el-select v-model="queryParams.vehicleType" clearable placeholder="请选择车辆类型" style="width: 140px">
+        <el-select v-model="queryParams.vehicleType" clearable placeholder="请选择车辆类型" style="width: 160px">
           <el-option
-            v-for="item in vehicleTypeOptions"
+            v-for="item in dict.type.parking_vehicle_type"
             :key="item.value"
             :label="item.label"
             :value="item.value"
@@ -32,9 +31,9 @@
         </el-select>
       </el-form-item>
       <el-form-item label="状态" prop="status">
-        <el-select v-model="queryParams.status" clearable placeholder="请选择状态" style="width: 120px">
+        <el-select v-model="queryParams.status" clearable placeholder="请选择状态" style="width: 160px">
           <el-option
-            v-for="item in vehicleStatusOptions"
+            v-for="item in dict.type.parking_vehicle_status"
             :key="item.value"
             :label="item.label"
             :value="item.value"
@@ -42,20 +41,16 @@
         </el-select>
       </el-form-item>
       <el-form-item label="是否默认" prop="isDefault">
-        <el-select v-model="queryParams.isDefault" clearable placeholder="请选择" style="width: 120px">
+        <el-select v-model="queryParams.isDefault" clearable placeholder="请选择" style="width: 160px">
           <el-option
-            v-for="item in vehicleDefaultOptions"
+            v-for="item in dict.type.parking_vehicle_default"
             :key="item.value"
             :label="item.label"
             :value="item.value"
           />
         </el-select>
       </el-form-item>
-      <el-form-item>
-        <el-button type="primary" icon="el-icon-search" size="mini" @click="handleQuery">搜索</el-button>
-        <el-button icon="el-icon-refresh" size="mini" @click="resetQuery">重置</el-button>
-      </el-form-item>
-    </el-form>
+    </search-form>
 
     <el-row :gutter="10" class="mb8">
       <el-col :span="1.5">
@@ -72,7 +67,7 @@
       </el-col>
       <el-col :span="1.5">
         <el-button
-          type="success"
+          type="primary"
           plain
           icon="el-icon-edit"
           size="mini"
@@ -85,7 +80,7 @@
       </el-col>
       <el-col :span="1.5">
         <el-button
-          type="danger"
+          type="primary"
           plain
           icon="el-icon-delete"
           size="mini"
@@ -99,13 +94,16 @@
       <right-toolbar :showSearch.sync="showSearch" @queryTable="getList" />
     </el-row>
 
-    <el-table
-      v-loading="loading"
+    <data-table
+      :loading="loading"
       :data="vehicleList"
+      :total="total"
+      :page.sync="queryParams.pageNum"
+      :limit.sync="queryParams.pageSize"
       empty-text="暂无车辆数据"
       @selection-change="handleSelectionChange"
+      @pagination="getList"
     >
-      <el-table-column type="selection" width="55" align="center" />
       <el-table-column label="车辆编号" align="center" prop="vehicleId" width="110" />
       <el-table-column label="客户" align="center" min-width="220">
         <template slot-scope="scope">
@@ -115,22 +113,19 @@
       <el-table-column label="车牌号" align="center" prop="plateNo" width="130" />
       <el-table-column label="车辆类型" align="center" width="110">
         <template slot-scope="scope">
-          {{ vehicleTypeLabel(scope.row.vehicleType) }}
+          <dict-tag :options="dict.type.parking_vehicle_type" :value="scope.row.vehicleType" />
         </template>
       </el-table-column>
       <el-table-column label="品牌" align="center" prop="brandName" width="120" show-overflow-tooltip />
       <el-table-column label="颜色" align="center" prop="vehicleColor" width="90" />
-      <el-table-column label="是否默认" align="center" width="90">
+      <el-table-column label="是否默认" align="center" width="100">
         <template slot-scope="scope">
-          <el-tag v-if="scope.row.isDefault === '1'" type="warning" size="small">默认</el-tag>
-          <span v-else>-</span>
+          <dict-tag :options="dict.type.parking_vehicle_default" :value="scope.row.isDefault" />
         </template>
       </el-table-column>
       <el-table-column label="状态" align="center" width="90">
         <template slot-scope="scope">
-          <el-tag :type="vehicleStatusTagType(scope.row.status)">
-            {{ vehicleStatusLabel(scope.row.status) }}
-          </el-tag>
+          <dict-tag :options="dict.type.parking_vehicle_status" :value="scope.row.status" />
         </template>
       </el-table-column>
       <el-table-column label="绑定时间" align="center" prop="bindTime" width="170">
@@ -170,103 +165,84 @@
           </el-button>
         </template>
       </el-table-column>
-    </el-table>
+    </data-table>
 
-    <pagination
-      v-show="total > 0"
-      :total="total"
-      :page.sync="queryParams.pageNum"
-      :limit.sync="queryParams.pageSize"
-      @pagination="getList"
-    />
-
-    <el-dialog :title="title" :visible.sync="open" width="560px" append-to-body @close="cancel">
-      <el-form ref="form" :model="form" :rules="rules" label-width="100px">
-        <el-form-item label="客户" prop="customerId">
-          <el-select v-model="form.customerId" filterable placeholder="请选择客户" style="width: 100%">
-            <el-option
-              v-for="item in customerOptions"
-              :key="item.customerId"
-              :label="formatCustomerOption(item)"
-              :value="item.customerId"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="车牌号" prop="plateNo">
-          <el-input v-model="form.plateNo" placeholder="请输入车牌号" maxlength="20" show-word-limit />
-        </el-form-item>
-        <el-form-item label="车辆类型" prop="vehicleType">
-          <el-select v-model="form.vehicleType" placeholder="请选择车辆类型" style="width: 100%">
-            <el-option
-              v-for="item in vehicleTypeOptions"
-              :key="item.value"
-              :label="item.label"
-              :value="item.value"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="品牌" prop="brandName">
-          <el-input v-model="form.brandName" placeholder="请输入品牌名称" maxlength="50" />
-        </el-form-item>
-        <el-form-item label="颜色" prop="vehicleColor">
-          <el-input v-model="form.vehicleColor" placeholder="请输入车辆颜色" maxlength="20" />
-        </el-form-item>
-        <el-form-item label="状态" prop="status">
-          <el-radio-group v-model="form.status">
-            <el-radio
-              v-for="item in vehicleStatusOptions"
-              :key="item.value"
-              :label="item.value"
-            >
-              {{ item.label }}
-            </el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="设为默认" prop="isDefault">
-          <el-radio-group v-model="form.isDefault">
-            <el-radio
-              v-for="item in vehicleDefaultOptions"
-              :key="item.value"
-              :label="item.value"
-            >
-              {{ item.label }}
-            </el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="备注" prop="remark">
-          <el-input
-            v-model="form.remark"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入备注"
-            maxlength="500"
-            show-word-limit
+    <form-dialog
+      :open.sync="open"
+      :title="title"
+      :model="form"
+      :rules="rules"
+      :submitting="submitting"
+      @submit="submitForm"
+      @cancel="reset"
+    >
+      <el-form-item label="客户" prop="customerId">
+        <el-select v-model="form.customerId" filterable placeholder="请选择客户" style="width: 100%">
+          <el-option
+            v-for="item in customerOptions"
+            :key="item.customerId"
+            :label="formatCustomerOption(item)"
+            :value="item.customerId"
           />
-        </el-form-item>
-      </el-form>
-      <div slot="footer" class="dialog-footer">
-        <el-button type="primary" :loading="submitting" @click="submitForm">确 定</el-button>
-        <el-button @click="cancel">取 消</el-button>
-      </div>
-    </el-dialog>
+        </el-select>
+      </el-form-item>
+      <el-form-item label="车牌号" prop="plateNo">
+        <el-input v-model="form.plateNo" placeholder="请输入车牌号" maxlength="20" show-word-limit />
+      </el-form-item>
+      <el-form-item label="车辆类型" prop="vehicleType">
+        <el-select v-model="form.vehicleType" placeholder="请选择车辆类型" style="width: 100%">
+          <el-option
+            v-for="item in dict.type.parking_vehicle_type"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="品牌" prop="brandName">
+        <el-input v-model="form.brandName" placeholder="请输入品牌名称" maxlength="50" />
+      </el-form-item>
+      <el-form-item label="颜色" prop="vehicleColor">
+        <el-input v-model="form.vehicleColor" placeholder="请输入车辆颜色" maxlength="20" />
+      </el-form-item>
+      <el-form-item label="状态" prop="status">
+        <el-radio-group v-model="form.status">
+          <el-radio v-for="item in dict.type.parking_vehicle_status" :key="item.value" :label="item.value">
+            {{ item.label }}
+          </el-radio>
+        </el-radio-group>
+      </el-form-item>
+      <el-form-item label="设为默认" prop="isDefault">
+        <el-radio-group v-model="form.isDefault">
+          <el-radio v-for="item in dict.type.parking_vehicle_default" :key="item.value" :label="item.value">
+            {{ item.label }}
+          </el-radio>
+        </el-radio-group>
+      </el-form-item>
+      <el-form-item label="备注" prop="remark">
+        <el-input
+          v-model="form.remark"
+          type="textarea"
+          :rows="3"
+          placeholder="请输入备注"
+          maxlength="500"
+          show-word-limit
+        />
+      </el-form-item>
+    </form-dialog>
   </div>
 </template>
 
 <script>
 import { listCustomerOptions } from '@/api/parking/customer'
 import { addVehicle, delVehicle, getVehicle, listVehicles, setDefaultVehicle, updateVehicle } from '@/api/parking/vehicle'
-import {
-  VEHICLE_DEFAULT_OPTIONS,
-  VEHICLE_STATUS_OPTIONS,
-  VEHICLE_TYPE_OPTIONS,
-  findCustomerLabel,
-  findLabel,
-  findTagType,
-  formatCustomerOption
-} from '../options'
+import { findCustomerLabel, formatCustomerOption } from '../options'
+import { SearchForm, DataTable, FormDialog } from '../components'
 
 export default {
   name: 'ParkingUserVehicle',
+  components: { SearchForm, DataTable, FormDialog },
+  dicts: ['parking_vehicle_type', 'parking_vehicle_status', 'parking_vehicle_default'],
   data() {
     return {
       loading: true,
@@ -280,9 +256,6 @@ export default {
       customerOptions: [],
       title: '',
       open: false,
-      vehicleTypeOptions: VEHICLE_TYPE_OPTIONS,
-      vehicleStatusOptions: VEHICLE_STATUS_OPTIONS,
-      vehicleDefaultOptions: VEHICLE_DEFAULT_OPTIONS,
       queryParams: {
         pageNum: 1,
         pageSize: 10,
@@ -326,10 +299,6 @@ export default {
         this.loading = false
       })
     },
-    cancel() {
-      this.open = false
-      this.reset()
-    },
     reset() {
       this.form = {
         vehicleId: undefined,
@@ -342,15 +311,10 @@ export default {
         status: '0',
         remark: undefined
       }
-      this.resetForm('form')
     },
     handleQuery() {
       this.queryParams.pageNum = 1
       this.getList()
-    },
-    resetQuery() {
-      this.resetForm('queryForm')
-      this.handleQuery()
     },
     handleAdd() {
       this.reset()
@@ -372,24 +336,19 @@ export default {
       })
     },
     submitForm() {
-      this.$refs.form.validate(valid => {
-        if (!valid) {
-          return
-        }
-        this.submitting = true
-        const request = this.form.vehicleId ? updateVehicle(this.form) : addVehicle(this.form)
-        request.then(() => {
-          this.$modal.msgSuccess(this.form.vehicleId ? '修改成功' : '新增成功')
-          this.open = false
-          this.getList()
-        }).finally(() => {
-          this.submitting = false
-        })
+      this.submitting = true
+      const request = this.form.vehicleId ? updateVehicle(this.form) : addVehicle(this.form)
+      request.then(() => {
+        this.$modal.msgSuccess(this.form.vehicleId ? '修改成功' : '新增成功')
+        this.open = false
+        this.getList()
+      }).finally(() => {
+        this.submitting = false
       })
     },
     handleDelete(row) {
       const vehicleIds = row.vehicleId || this.ids
-      this.$modal.confirm('是否确认删除车辆编号为"' + vehicleIds + '"的数据项？').then(() => {
+      this.$modal.confirm('是否确认删除车辆编号为 "' + vehicleIds + '" 的数据项？').then(() => {
         return delVehicle(vehicleIds)
       }).then(() => {
         this.getList()
@@ -397,37 +356,19 @@ export default {
       }).catch(() => {})
     },
     handleSetDefault(row) {
-      this.$modal.confirm('是否将车牌"' + row.plateNo + '"设为默认车辆？').then(() => {
+      this.$modal.confirm('是否将车牌 "' + row.plateNo + '" 设为默认车辆？').then(() => {
         return setDefaultVehicle(row.vehicleId)
       }).then(() => {
         this.getList()
         this.$modal.msgSuccess('设置成功')
       }).catch(() => {})
     },
-    vehicleTypeLabel(type) {
-      return findLabel(VEHICLE_TYPE_OPTIONS, type)
-    },
     formatCustomerOption(item) {
       return formatCustomerOption(item)
     },
     customerLabel(customerId) {
       return findCustomerLabel(this.customerOptions, customerId)
-    },
-    vehicleStatusLabel(status) {
-      return findLabel(VEHICLE_STATUS_OPTIONS, status)
-    },
-    vehicleStatusTagType(status) {
-      return findTagType(VEHICLE_STATUS_OPTIONS, status)
     }
   }
 }
 </script>
-
-<style scoped>
-.page-title {
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 12px;
-  color: #303133;
-}
-</style>

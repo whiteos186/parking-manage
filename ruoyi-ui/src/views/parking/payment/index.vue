@@ -1,7 +1,6 @@
 <template>
   <div class="app-container">
-    <div class="page-title">支付流水</div>
-    <el-form ref="queryForm" :model="queryParams" size="small" :inline="true" v-show="showSearch">
+    <search-form :model="queryParams" :visible="showSearch" @search="handleQuery" @reset="resetDateRange">
       <el-form-item label="订单号" prop="bizOrderNo">
         <el-input
           v-model="queryParams.bizOrderNo"
@@ -12,9 +11,9 @@
         />
       </el-form-item>
       <el-form-item label="订单类型" prop="bizOrderType">
-        <el-select v-model="queryParams.bizOrderType" clearable placeholder="请选择订单类型" style="width: 130px">
+        <el-select v-model="queryParams.bizOrderType" clearable placeholder="请选择订单类型" style="width: 160px">
           <el-option
-            v-for="item in bizTypeOptions"
+            v-for="item in dict.type.parking_payment_biz_type"
             :key="item.value"
             :label="item.label"
             :value="item.value"
@@ -22,9 +21,9 @@
         </el-select>
       </el-form-item>
       <el-form-item label="支付渠道" prop="payChannel">
-        <el-select v-model="queryParams.payChannel" clearable placeholder="请选择支付渠道" style="width: 130px">
+        <el-select v-model="queryParams.payChannel" clearable placeholder="请选择支付渠道" style="width: 160px">
           <el-option
-            v-for="item in channelOptions"
+            v-for="item in dict.type.parking_payment_channel"
             :key="item.value"
             :label="item.label"
             :value="item.value"
@@ -32,9 +31,9 @@
         </el-select>
       </el-form-item>
       <el-form-item label="支付状态" prop="payStatus">
-        <el-select v-model="queryParams.payStatus" clearable placeholder="请选择支付状态" style="width: 130px">
+        <el-select v-model="queryParams.payStatus" clearable placeholder="请选择支付状态" style="width: 160px">
           <el-option
-            v-for="item in statusOptions"
+            v-for="item in dict.type.parking_payment_status"
             :key="item.value"
             :label="item.label"
             :value="item.value"
@@ -52,7 +51,7 @@
         </el-select>
       </el-form-item>
       <el-form-item label="客户" prop="customerId">
-        <el-select v-model="queryParams.customerId" clearable filterable placeholder="请选择客户" style="width: 260px">
+        <el-select v-model="queryParams.customerId" clearable filterable placeholder="请选择客户" style="width: 280px">
           <el-option
             v-for="item in customerOptions"
             :key="item.customerId"
@@ -72,11 +71,7 @@
           style="width: 240px"
         />
       </el-form-item>
-      <el-form-item>
-        <el-button type="primary" icon="el-icon-search" size="mini" @click="handleQuery">搜索</el-button>
-        <el-button icon="el-icon-refresh" size="mini" @click="resetQuery">重置</el-button>
-      </el-form-item>
-    </el-form>
+    </search-form>
 
     <el-row :gutter="10" class="mb8">
       <el-col :span="1.5">
@@ -93,7 +88,7 @@
       </el-col>
       <el-col :span="1.5">
         <el-button
-          type="success"
+          type="primary"
           plain
           icon="el-icon-edit"
           size="mini"
@@ -106,7 +101,7 @@
       </el-col>
       <el-col :span="1.5">
         <el-button
-          type="danger"
+          type="primary"
           plain
           icon="el-icon-delete"
           size="mini"
@@ -120,20 +115,21 @@
       <right-toolbar :showSearch.sync="showSearch" @queryTable="getList" />
     </el-row>
 
-    <el-table
-      v-loading="loading"
+    <data-table
+      :loading="loading"
       :data="paymentList"
+      :total="total"
+      :page.sync="queryParams.pageNum"
+      :limit.sync="queryParams.pageSize"
       empty-text="暂无支付流水数据"
       @selection-change="handleSelectionChange"
+      @pagination="getList"
     >
-      <el-table-column type="selection" width="55" align="center" />
       <el-table-column label="流水编号" align="center" prop="paymentId" width="90" />
       <el-table-column label="业务订单号" align="center" prop="bizOrderNo" min-width="160" show-overflow-tooltip />
       <el-table-column label="订单类型" align="center" width="100">
         <template slot-scope="scope">
-          <el-tag :type="findTagType(bizTypeOptions, scope.row.bizOrderType)">
-            {{ findLabel(bizTypeOptions, scope.row.bizOrderType) }}
-          </el-tag>
+          <dict-tag :options="dict.type.parking_payment_biz_type" :value="scope.row.bizOrderType" />
         </template>
       </el-table-column>
       <el-table-column label="客户" align="center" min-width="220">
@@ -144,19 +140,15 @@
       <el-table-column label="停车场" align="center" prop="lotName" min-width="140" show-overflow-tooltip />
       <el-table-column label="支付渠道" align="center" width="100">
         <template slot-scope="scope">
-          <el-tag :type="findTagType(channelOptions, scope.row.payChannel)">
-            {{ findLabel(channelOptions, scope.row.payChannel) }}
-          </el-tag>
+          <dict-tag :options="dict.type.parking_payment_channel" :value="scope.row.payChannel" />
         </template>
       </el-table-column>
       <el-table-column label="支付金额" align="center" width="110">
-        <template slot-scope="scope">¥{{ formatAmount(scope.row.payAmount) }}</template>
+        <template slot-scope="scope">¥{{ formatPrice(scope.row.payAmount) }}</template>
       </el-table-column>
       <el-table-column label="支付状态" align="center" width="100">
         <template slot-scope="scope">
-          <el-tag :type="findTagType(statusOptions, scope.row.payStatus)">
-            {{ findLabel(statusOptions, scope.row.payStatus) }}
-          </el-tag>
+          <dict-tag :options="dict.type.parking_payment_status" :value="scope.row.payStatus" />
         </template>
       </el-table-column>
       <el-table-column label="交易号" align="center" prop="tradeNo" min-width="160" show-overflow-tooltip />
@@ -202,15 +194,7 @@
           </el-button>
         </template>
       </el-table-column>
-    </el-table>
-
-    <pagination
-      v-show="total > 0"
-      :total="total"
-      :page.sync="queryParams.pageNum"
-      :limit.sync="queryParams.pageSize"
-      @pagination="getList"
-    />
+    </data-table>
   </div>
 </template>
 
@@ -218,18 +202,13 @@
 import { delPayment, listPayments, refundPayment } from '@/api/parking/payment'
 import { listCustomerOptions } from '@/api/parking/customer'
 import { listParkingLotOptions } from '@/api/parking/lot'
-import {
-  PAYMENT_BIZ_TYPE_OPTIONS,
-  PAYMENT_CHANNEL_OPTIONS,
-  PAYMENT_STATUS_OPTIONS,
-  findCustomerLabel,
-  findLabel,
-  findTagType,
-  formatCustomerOption
-} from '../options'
+import { findCustomerLabel, formatCustomerOption, formatPrice } from '../options'
+import { SearchForm, DataTable } from '../components'
 
 export default {
   name: 'ParkingPayment',
+  components: { SearchForm, DataTable },
+  dicts: ['parking_payment_biz_type', 'parking_payment_channel', 'parking_payment_status'],
   data() {
     return {
       loading: true,
@@ -242,9 +221,6 @@ export default {
       customerOptions: [],
       dateRange: [],
       lotOptions: [],
-      bizTypeOptions: PAYMENT_BIZ_TYPE_OPTIONS,
-      channelOptions: PAYMENT_CHANNEL_OPTIONS,
-      statusOptions: PAYMENT_STATUS_OPTIONS,
       queryParams: {
         pageNum: 1,
         pageSize: 10,
@@ -279,7 +255,7 @@ export default {
     },
     getLotOptions() {
       listParkingLotOptions().then(response => {
-        this.lotOptions = response.data
+        this.lotOptions = response.data || []
       })
     },
     getCustomerOptions() {
@@ -291,9 +267,8 @@ export default {
       this.queryParams.pageNum = 1
       this.getList()
     },
-    resetQuery() {
+    resetDateRange() {
       this.dateRange = []
-      this.resetForm('queryForm')
       this.handleQuery()
     },
     handleAdd() {
@@ -310,7 +285,7 @@ export default {
     },
     handleDelete(row) {
       const paymentIds = row.paymentId || this.ids
-      this.$modal.confirm('是否确认删除支付流水编号为"' + paymentIds + '"的数据项？').then(() => {
+      this.$modal.confirm('是否确认删除支付流水编号为 "' + paymentIds + '" 的数据项？').then(() => {
         return delPayment(paymentIds)
       }).then(() => {
         this.getList()
@@ -318,26 +293,14 @@ export default {
       }).catch(() => {})
     },
     handleRefund(row) {
-      this.$modal.confirm('是否确认对支付流水"' + row.bizOrderNo + '"执行退款操作？').then(() => {
+      this.$modal.confirm('是否确认对支付流水 "' + row.bizOrderNo + '" 执行退款操作？').then(() => {
         return refundPayment({ paymentId: row.paymentId })
       }).then(() => {
         this.getList()
         this.$modal.msgSuccess('退款成功')
       }).catch(() => {})
     },
-    formatAmount(value) {
-      const num = Number(value)
-      if (Number.isNaN(num)) {
-        return '0.00'
-      }
-      return num.toFixed(2)
-    },
-    findLabel(options, value) {
-      return findLabel(options, value)
-    },
-    findTagType(options, value) {
-      return findTagType(options, value)
-    },
+    formatPrice,
     formatCustomerOption(item) {
       return formatCustomerOption(item)
     },
@@ -347,12 +310,3 @@ export default {
   }
 }
 </script>
-
-<style scoped>
-.page-title {
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 12px;
-  color: #303133;
-}
-</style>

@@ -1,31 +1,26 @@
 <template>
   <div class="app-container">
-    <div class="page-title">停车场管理</div>
-    <el-form ref="queryForm" :model="queryParams" size="small" :inline="true" v-show="showSearch">
+    <search-form :model="queryParams" :visible="showSearch" @search="handleQuery" @reset="handleQuery">
       <el-form-item label="停车场名称" prop="lotName">
         <el-input
           v-model="queryParams.lotName"
           placeholder="请输入停车场名称"
           clearable
-          style="width: 240px"
+          style="width: 200px"
           @keyup.enter.native="handleQuery"
         />
       </el-form-item>
       <el-form-item label="状态" prop="status">
-        <el-select v-model="queryParams.status" clearable placeholder="请选择状态">
+        <el-select v-model="queryParams.status" clearable placeholder="请选择状态" style="width: 160px">
           <el-option
-            v-for="item in lotStatusOptions"
+            v-for="item in dict.type.parking_lot_status"
             :key="item.value"
             :label="item.label"
             :value="item.value"
           />
         </el-select>
       </el-form-item>
-      <el-form-item>
-        <el-button type="primary" icon="el-icon-search" size="mini" @click="handleQuery">搜索</el-button>
-        <el-button icon="el-icon-refresh" size="mini" @click="resetQuery">重置</el-button>
-      </el-form-item>
-    </el-form>
+    </search-form>
 
     <el-row :gutter="10" class="mb8">
       <el-col :span="1.5">
@@ -42,7 +37,7 @@
       </el-col>
       <el-col :span="1.5">
         <el-button
-          type="success"
+          type="primary"
           plain
           icon="el-icon-edit"
           size="mini"
@@ -55,7 +50,7 @@
       </el-col>
       <el-col :span="1.5">
         <el-button
-          type="danger"
+          type="primary"
           plain
           icon="el-icon-delete"
           size="mini"
@@ -66,41 +61,44 @@
           删除
         </el-button>
       </el-col>
+      <el-col :span="1.5">
+        <el-button
+          type="primary"
+          plain
+          icon="el-icon-setting"
+          size="mini"
+          v-hasPermi="['parking:settings:list']"
+          @click="$router.push('/archives/settings')"
+        >
+          停车设置
+        </el-button>
+      </el-col>
       <right-toolbar :showSearch.sync="showSearch" @queryTable="getList" />
     </el-row>
 
-    <el-table
-      v-loading="loading"
+    <data-table
+      :loading="loading"
       :data="lotList"
+      :total="total"
+      :page.sync="queryParams.pageNum"
+      :limit.sync="queryParams.pageSize"
       empty-text="暂无停车场数据"
       @selection-change="handleSelectionChange"
+      @pagination="getList"
     >
-      <el-table-column type="selection" width="55" align="center" />
       <el-table-column label="停车场编号" align="center" prop="lotId" width="110" />
       <el-table-column label="停车场名称" align="center" prop="lotName" min-width="160" show-overflow-tooltip />
       <el-table-column label="地址" align="center" prop="lotAddress" min-width="220" show-overflow-tooltip />
       <el-table-column label="总车位数" align="center" prop="totalSpaceCount" width="100" />
       <el-table-column label="空闲车位数" align="center" prop="availableSpaceCount" width="110" />
-      <el-table-column label="占用率" align="center" width="160">
+      <el-table-column label="占用率" align="center" width="100">
         <template slot-scope="scope">
-          <el-progress
-            :percentage="lotOccupancy(scope.row)"
-            :color="occupancyColor"
-            :stroke-width="10"
-          />
+          <span>{{ lotOccupancy(scope.row) }}%</span>
         </template>
-      </el-table-column>
-      <el-table-column label="月租价格" align="center" prop="monthlyPrice" width="100">
-        <template slot-scope="scope">¥{{ formatPrice(scope.row.monthlyPrice) }}</template>
-      </el-table-column>
-      <el-table-column label="临停单价" align="center" prop="tempHourPrice" width="100">
-        <template slot-scope="scope">¥{{ formatPrice(scope.row.tempHourPrice) }}/h</template>
       </el-table-column>
       <el-table-column label="状态" align="center" width="90">
         <template slot-scope="scope">
-          <el-tag :type="lotStatusTagType(scope.row.status)">
-            {{ lotStatusLabel(scope.row.status) }}
-          </el-tag>
+          <dict-tag :options="dict.type.parking_lot_status" :value="scope.row.status" />
         </template>
       </el-table-column>
       <el-table-column label="创建时间" align="center" prop="createTime" width="170">
@@ -130,89 +128,74 @@
           </el-button>
         </template>
       </el-table-column>
-    </el-table>
+    </data-table>
 
-    <pagination
-      v-show="total > 0"
-      :total="total"
-      :page.sync="queryParams.pageNum"
-      :limit.sync="queryParams.pageSize"
-      @pagination="getList"
-    />
-
-    <el-dialog :title="title" :visible.sync="open" width="560px" append-to-body @close="cancel">
-      <el-form ref="form" :model="form" :rules="rules" label-width="100px">
-        <el-form-item label="停车场名称" prop="lotName">
-          <el-input v-model="form.lotName" placeholder="请输入停车场名称" maxlength="100" show-word-limit />
-        </el-form-item>
-        <el-form-item label="停车场地址" prop="lotAddress">
-          <el-input
-            v-model="form.lotAddress"
-            type="textarea"
-            :rows="2"
-            placeholder="请输入停车场地址"
-            maxlength="255"
-            show-word-limit
-          />
-        </el-form-item>
-        <el-form-item label="月租价格" prop="monthlyPrice">
-          <el-input-number
-            v-model="form.monthlyPrice"
-            :min="0"
-            :precision="2"
-            :step="50"
-            controls-position="right"
-            style="width: 200px"
-          />
-          <span class="form-tip">元/月</span>
-        </el-form-item>
-        <el-form-item label="临停单价" prop="tempHourPrice">
-          <el-input-number
-            v-model="form.tempHourPrice"
-            :min="0"
-            :precision="2"
-            :step="1"
-            controls-position="right"
-            style="width: 200px"
-          />
-          <span class="form-tip">元/小时</span>
-        </el-form-item>
-        <el-form-item label="状态" prop="status">
-          <el-radio-group v-model="form.status">
-            <el-radio
-              v-for="item in lotStatusOptions"
-              :key="item.value"
-              :label="item.value"
-            >
-              {{ item.label }}
-            </el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="备注" prop="remark">
-          <el-input
-            v-model="form.remark"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入备注"
-            maxlength="500"
-            show-word-limit
-          />
-        </el-form-item>
-      </el-form>
-      <div slot="footer" class="dialog-footer">
-        <el-button type="primary" :loading="submitting" @click="submitForm">确 定</el-button>
-        <el-button @click="cancel">取 消</el-button>
-      </div>
-    </el-dialog>
+    <form-dialog
+      :open.sync="open"
+      :title="title"
+      :model="form"
+      :rules="rules"
+      :submitting="submitting"
+      @submit="submitForm"
+      @cancel="reset"
+    >
+      <el-form-item label="停车场名称" prop="lotName">
+        <el-input v-model="form.lotName" placeholder="请输入停车场名称" maxlength="100" show-word-limit />
+      </el-form-item>
+      <el-form-item label="停车场地址" prop="lotAddress">
+        <el-input
+          v-model="form.lotAddress"
+          type="textarea"
+          :rows="2"
+          placeholder="请输入停车场地址"
+          maxlength="255"
+          show-word-limit
+        />
+      </el-form-item>
+      <el-form-item label="总车位数" prop="totalSpaceCount">
+        <el-input-number
+          v-model="form.totalSpaceCount"
+          :min="1"
+          :max="99999"
+          :precision="0"
+          :step="10"
+          controls-position="right"
+          style="width: 220px"
+        />
+      </el-form-item>
+      <el-form-item label="状态" prop="status">
+        <el-radio-group v-model="form.status">
+          <el-radio
+            v-for="item in dict.type.parking_lot_status"
+            :key="item.value"
+            :label="item.value"
+          >
+            {{ item.label }}
+          </el-radio>
+        </el-radio-group>
+      </el-form-item>
+      <el-form-item label="备注" prop="remark">
+        <el-input
+          v-model="form.remark"
+          type="textarea"
+          :rows="3"
+          placeholder="请输入备注"
+          maxlength="500"
+          show-word-limit
+        />
+      </el-form-item>
+    </form-dialog>
   </div>
 </template>
 
 <script>
 import { addParkingLot, delParkingLot, getParkingLot, listParkingLots, updateParkingLot } from '@/api/parking/lot'
-import { LOT_STATUS_OPTIONS, findLabel, findTagType } from '../options'
+import { SearchForm, DataTable, FormDialog } from '../components'
 
 export default {
   name: 'ParkingLot',
+  components: { SearchForm, DataTable, FormDialog },
+  dicts: ['parking_lot_status'],
   data() {
     return {
       loading: true,
@@ -225,7 +208,6 @@ export default {
       lotList: [],
       title: '',
       open: false,
-      lotStatusOptions: LOT_STATUS_OPTIONS,
       queryParams: {
         pageNum: 1,
         pageSize: 10,
@@ -242,11 +224,9 @@ export default {
           { required: true, message: '停车场地址不能为空', trigger: 'blur' },
           { max: 255, message: '停车场地址不能超过 255 个字符', trigger: 'blur' }
         ],
-        monthlyPrice: [
-          { required: true, message: '月租价格不能为空', trigger: 'blur' }
-        ],
-        tempHourPrice: [
-          { required: true, message: '临停单价不能为空', trigger: 'blur' }
+        totalSpaceCount: [
+          { required: true, message: '总车位数不能为空', trigger: 'blur' },
+          { type: 'number', min: 1, message: '总车位数必须大于 0', trigger: 'blur' }
         ]
       }
     }
@@ -264,29 +244,21 @@ export default {
         this.loading = false
       })
     },
-    cancel() {
-      this.open = false
-      this.reset()
-    },
     reset() {
       this.form = {
         lotId: undefined,
         lotName: undefined,
         lotAddress: undefined,
-        monthlyPrice: 0,
-        tempHourPrice: 0,
+        totalSpaceCount: 1,
+        monthlyPrice: undefined,
+        tempHourPrice: undefined,
         status: '0',
         remark: undefined
       }
-      this.resetForm('form')
     },
     handleQuery() {
       this.queryParams.pageNum = 1
       this.getList()
-    },
-    resetQuery() {
-      this.resetForm('queryForm')
-      this.handleQuery()
     },
     handleAdd() {
       this.reset()
@@ -308,24 +280,19 @@ export default {
       })
     },
     submitForm() {
-      this.$refs.form.validate(valid => {
-        if (!valid) {
-          return
-        }
-        this.submitting = true
-        const request = this.form.lotId ? updateParkingLot(this.form) : addParkingLot(this.form)
-        request.then(() => {
-          this.$modal.msgSuccess(this.form.lotId ? '修改成功' : '新增成功')
-          this.open = false
-          this.getList()
-        }).finally(() => {
-          this.submitting = false
-        })
+      this.submitting = true
+      const request = this.form.lotId ? updateParkingLot(this.form) : addParkingLot(this.form)
+      request.then(() => {
+        this.$modal.msgSuccess(this.form.lotId ? '修改成功' : '新增成功')
+        this.open = false
+        this.getList()
+      }).finally(() => {
+        this.submitting = false
       })
     },
     handleDelete(row) {
       const lotIds = row.lotId || this.ids
-      this.$modal.confirm('是否确认删除停车场编号为“' + lotIds + '”的数据项？').then(() => {
+      this.$modal.confirm('是否确认删除停车场编号为 "' + lotIds + '" 的数据项？').then(() => {
         return delParkingLot(lotIds)
       }).then(() => {
         this.getList()
@@ -338,42 +305,14 @@ export default {
         return 0
       }
       const available = Number(row.availableSpaceCount) || 0
-      const occupied = Math.max(total - available, 0)
-      return Math.round((occupied / total) * 100)
-    },
-    occupancyColor(percentage) {
-      if (percentage >= 90) return '#f56c6c'
-      if (percentage >= 70) return '#e6a23c'
-      return '#67c23a'
-    },
-    formatPrice(value) {
-      const num = Number(value)
-      if (Number.isNaN(num)) {
-        return '0.00'
-      }
-      return num.toFixed(2)
-    },
-    lotStatusLabel(status) {
-      return findLabel(LOT_STATUS_OPTIONS, status)
-    },
-    lotStatusTagType(status) {
-      return findTagType(LOT_STATUS_OPTIONS, status)
+      return Math.round((Math.max(total - available, 0) / total) * 100)
     }
   }
 }
 </script>
 
 <style scoped>
-.page-title {
-  font-size: 16px;
-  font-weight: 600;
+.mb12 {
   margin-bottom: 12px;
-  color: #303133;
-}
-
-.form-tip {
-  margin-left: 8px;
-  color: #909399;
-  font-size: 12px;
 }
 </style>
