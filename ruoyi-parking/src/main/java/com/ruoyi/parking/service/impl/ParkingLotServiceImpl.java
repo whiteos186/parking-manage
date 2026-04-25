@@ -56,8 +56,11 @@ public class ParkingLotServiceImpl implements IParkingLotService
         {
             parkingLot.setTempHourPrice(BigDecimal.ZERO);
         }
-        parkingLot.setTotalSpaceCount(0);
-        parkingLot.setAvailableSpaceCount(0);
+        if (parkingLot.getTotalSpaceCount() == null || parkingLot.getTotalSpaceCount() < 1)
+        {
+            throw new ServiceException("总车位数必须大于 0");
+        }
+        parkingLot.setAvailableSpaceCount(parkingLot.getTotalSpaceCount());
         return parkingLotMapper.insertParkingLot(parkingLot);
     }
 
@@ -81,8 +84,17 @@ public class ParkingLotServiceImpl implements IParkingLotService
         {
             parkingLot.setTempHourPrice(current.getTempHourPrice());
         }
-        parkingLot.setTotalSpaceCount(current.getTotalSpaceCount());
-        parkingLot.setAvailableSpaceCount(current.getAvailableSpaceCount());
+        if (parkingLot.getTotalSpaceCount() == null || parkingLot.getTotalSpaceCount() < 1)
+        {
+            throw new ServiceException("总车位数必须大于 0");
+        }
+        int existingSpaces = parkingSpaceMapper.countParkingSpaceByLotId(parkingLot.getLotId());
+        if (parkingLot.getTotalSpaceCount() < existingSpaces)
+        {
+            throw new ServiceException("总车位数不能小于已录入的车位数（当前 " + existingSpaces + " 个）");
+        }
+        int occupied = parkingSpaceMapper.countOccupiedParkingSpaceByLotId(parkingLot.getLotId());
+        parkingLot.setAvailableSpaceCount(parkingLot.getTotalSpaceCount() - occupied);
         return parkingLotMapper.updateParkingLot(parkingLot);
     }
 

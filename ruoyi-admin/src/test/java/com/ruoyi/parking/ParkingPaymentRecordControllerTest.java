@@ -17,6 +17,8 @@ import com.ruoyi.common.core.domain.model.LoginUser;
 import com.ruoyi.framework.web.service.PermissionService;
 import com.ruoyi.parking.controller.ParkingPaymentRecordController;
 import com.ruoyi.parking.domain.ParkingPaymentRecord;
+import com.ruoyi.parking.mapper.ParkingCustomerMapper;
+import com.ruoyi.parking.mapper.ParkingLotAdminMapper;
 import com.ruoyi.parking.service.IParkingPaymentRecordService;
 import java.math.BigDecimal;
 import java.util.Arrays;
@@ -79,7 +81,8 @@ class ParkingPaymentRecordControllerTest
         record.setPayChannel("1");
         when(paymentService.selectParkingPaymentRecordList(any(ParkingPaymentRecord.class))).thenReturn(List.of(record));
 
-        ParkingPaymentRecordController controller = new ParkingPaymentRecordController(paymentService);
+        setLoginUserPermissions("parking:payment:list");
+        ParkingPaymentRecordController controller = new ParkingPaymentRecordController(paymentService, Mockito.mock(ParkingLotAdminMapper.class), Mockito.mock(ParkingCustomerMapper.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         mockMvc.perform(get("/parking/payment/list")
@@ -110,7 +113,7 @@ class ParkingPaymentRecordControllerTest
         record.setPayAmount(new BigDecimal("99.00"));
         when(paymentService.selectParkingPaymentRecordById(6L)).thenReturn(record);
 
-        ParkingPaymentRecordController controller = new ParkingPaymentRecordController(paymentService);
+        ParkingPaymentRecordController controller = new ParkingPaymentRecordController(paymentService, Mockito.mock(ParkingLotAdminMapper.class), Mockito.mock(ParkingCustomerMapper.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         mockMvc.perform(get("/parking/payment/6"))
@@ -129,7 +132,7 @@ class ParkingPaymentRecordControllerTest
         when(paymentService.insertParkingPaymentRecord(any(ParkingPaymentRecord.class))).thenReturn(1);
 
         setLoginUserPermissions("parking:payment:add");
-        ParkingPaymentRecordController controller = new ParkingPaymentRecordController(paymentService);
+        ParkingPaymentRecordController controller = new ParkingPaymentRecordController(paymentService, Mockito.mock(ParkingLotAdminMapper.class), Mockito.mock(ParkingCustomerMapper.class));
 
         ParkingPaymentRecord form = new ParkingPaymentRecord();
         form.setBizOrderNo("ORD-NEW");
@@ -151,7 +154,7 @@ class ParkingPaymentRecordControllerTest
         when(paymentService.updateParkingPaymentRecord(any(ParkingPaymentRecord.class))).thenReturn(1);
 
         setLoginUserPermissions("parking:payment:edit");
-        ParkingPaymentRecordController controller = new ParkingPaymentRecordController(paymentService);
+        ParkingPaymentRecordController controller = new ParkingPaymentRecordController(paymentService, Mockito.mock(ParkingLotAdminMapper.class), Mockito.mock(ParkingCustomerMapper.class));
 
         ParkingPaymentRecord form = new ParkingPaymentRecord();
         form.setPaymentId(100L);
@@ -173,7 +176,7 @@ class ParkingPaymentRecordControllerTest
         IParkingPaymentRecordService paymentService = Mockito.mock(IParkingPaymentRecordService.class);
         when(paymentService.deleteParkingPaymentRecordByIds(new Long[] { 3L, 4L })).thenReturn(2);
 
-        ParkingPaymentRecordController controller = new ParkingPaymentRecordController(paymentService);
+        ParkingPaymentRecordController controller = new ParkingPaymentRecordController(paymentService, Mockito.mock(ParkingLotAdminMapper.class), Mockito.mock(ParkingCustomerMapper.class));
         AjaxResult result = controller.remove(new Long[] { 3L, 4L });
 
         assertEquals(200, result.get("code"));
@@ -187,7 +190,7 @@ class ParkingPaymentRecordControllerTest
         when(paymentService.refundParkingPaymentRecord(any(ParkingPaymentRecord.class))).thenReturn(1);
 
         setLoginUserPermissions("parking:payment:refund");
-        ParkingPaymentRecordController controller = new ParkingPaymentRecordController(paymentService);
+        ParkingPaymentRecordController controller = new ParkingPaymentRecordController(paymentService, Mockito.mock(ParkingLotAdminMapper.class), Mockito.mock(ParkingCustomerMapper.class));
 
         ParkingPaymentRecord form = new ParkingPaymentRecord();
         form.setPaymentId(55L);
@@ -322,9 +325,23 @@ class ParkingPaymentRecordControllerTest
         }
 
         @Bean
-        ParkingPaymentRecordController parkingPaymentRecordController(IParkingPaymentRecordService parkingPaymentRecordService)
+        ParkingLotAdminMapper parkingLotAdminMapper()
         {
-            return new ParkingPaymentRecordController(parkingPaymentRecordService);
+            return Mockito.mock(ParkingLotAdminMapper.class);
+        }
+
+        @Bean
+        ParkingCustomerMapper parkingCustomerMapper()
+        {
+            return Mockito.mock(ParkingCustomerMapper.class);
+        }
+
+        @Bean
+        ParkingPaymentRecordController parkingPaymentRecordController(IParkingPaymentRecordService parkingPaymentRecordService,
+                                                                      ParkingLotAdminMapper parkingLotAdminMapper,
+                                                                      ParkingCustomerMapper parkingCustomerMapper)
+        {
+            return new ParkingPaymentRecordController(parkingPaymentRecordService, parkingLotAdminMapper, parkingCustomerMapper);
         }
     }
 }

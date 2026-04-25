@@ -9,6 +9,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="orderNo" column="order_no"/>
         <result property="customerId" column="customer_id"/>
         <result property="vehicleId" column="vehicle_id"/>
+        <result property="vehiclePlateNo" column="vehicle_plate_no"/>
         <result property="lotId" column="lot_id"/>
         <result property="monthCount" column="month_count"/>
         <result property="startTime" column="start_time"/>
@@ -35,6 +36,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             o.order_no,
             o.customer_id,
             o.vehicle_id,
+            o.vehicle_plate_no,
             o.lot_id,
             o.month_count,
             o.start_time,
@@ -89,6 +91,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             order_no,
             customer_id,
             vehicle_id,
+            vehicle_plate_no,
             lot_id,
             month_count,
             start_time,
@@ -106,6 +109,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             #{orderNo},
             #{customerId},
             #{vehicleId},
+            #{vehiclePlateNo},
             #{lotId},
             #{monthCount},
             #{startTime},
@@ -128,6 +132,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="orderNo != null and orderNo != ''">order_no = #{orderNo},</if>
             <if test="customerId != null">customer_id = #{customerId},</if>
             <if test="vehicleId != null">vehicle_id = #{vehicleId},</if>
+            <if test="vehiclePlateNo != null">vehicle_plate_no = #{vehiclePlateNo},</if>
             <if test="lotId != null">lot_id = #{lotId},</if>
             <if test="monthCount != null">month_count = #{monthCount},</if>
             <if test="startTime != null">start_time = #{startTime},</if>

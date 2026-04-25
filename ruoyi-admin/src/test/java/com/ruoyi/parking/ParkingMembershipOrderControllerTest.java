@@ -17,6 +17,8 @@ import com.ruoyi.common.core.domain.model.LoginUser;
 import com.ruoyi.framework.web.service.PermissionService;
 import com.ruoyi.parking.controller.ParkingMembershipOrderController;
 import com.ruoyi.parking.domain.ParkingMembershipOrder;
+import com.ruoyi.parking.mapper.ParkingCustomerMapper;
+import com.ruoyi.parking.mapper.ParkingLotAdminMapper;
 import com.ruoyi.parking.service.IParkingMembershipOrderService;
 import java.util.Arrays;
 import java.util.Collections;
@@ -79,7 +81,8 @@ class ParkingMembershipOrderControllerTest
         when(membershipOrderService.selectParkingMembershipOrderList(any(ParkingMembershipOrder.class)))
             .thenReturn(List.of(order));
 
-        ParkingMembershipOrderController controller = new ParkingMembershipOrderController(membershipOrderService);
+        setLoginUserPermissions("parking:membership:list");
+        ParkingMembershipOrderController controller = new ParkingMembershipOrderController(membershipOrderService, Mockito.mock(ParkingLotAdminMapper.class), Mockito.mock(ParkingCustomerMapper.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         mockMvc.perform(get("/parking/membership/list")
@@ -107,7 +110,7 @@ class ParkingMembershipOrderControllerTest
         order.setOrderNo("PO20240601000001");
         when(membershipOrderService.selectParkingMembershipOrderById(6L)).thenReturn(order);
 
-        ParkingMembershipOrderController controller = new ParkingMembershipOrderController(membershipOrderService);
+        ParkingMembershipOrderController controller = new ParkingMembershipOrderController(membershipOrderService, Mockito.mock(ParkingLotAdminMapper.class), Mockito.mock(ParkingCustomerMapper.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         mockMvc.perform(get("/parking/membership/6"))
@@ -126,7 +129,7 @@ class ParkingMembershipOrderControllerTest
         when(membershipOrderService.insertParkingMembershipOrder(any(ParkingMembershipOrder.class))).thenReturn(1);
 
         setLoginUserPermissions("parking:membership:add");
-        ParkingMembershipOrderController controller = new ParkingMembershipOrderController(membershipOrderService);
+        ParkingMembershipOrderController controller = new ParkingMembershipOrderController(membershipOrderService, Mockito.mock(ParkingLotAdminMapper.class), Mockito.mock(ParkingCustomerMapper.class));
 
         ParkingMembershipOrder form = new ParkingMembershipOrder();
         form.setLotId(1L);
@@ -147,7 +150,7 @@ class ParkingMembershipOrderControllerTest
         when(membershipOrderService.updateParkingMembershipOrder(any(ParkingMembershipOrder.class))).thenReturn(1);
 
         setLoginUserPermissions("parking:membership:edit");
-        ParkingMembershipOrderController controller = new ParkingMembershipOrderController(membershipOrderService);
+        ParkingMembershipOrderController controller = new ParkingMembershipOrderController(membershipOrderService, Mockito.mock(ParkingLotAdminMapper.class), Mockito.mock(ParkingCustomerMapper.class));
 
         ParkingMembershipOrder form = new ParkingMembershipOrder();
         form.setMembershipOrderId(100L);
@@ -168,7 +171,7 @@ class ParkingMembershipOrderControllerTest
         IParkingMembershipOrderService membershipOrderService = Mockito.mock(IParkingMembershipOrderService.class);
         when(membershipOrderService.deleteParkingMembershipOrderByIds(new Long[] { 3L, 4L })).thenReturn(2);
 
-        ParkingMembershipOrderController controller = new ParkingMembershipOrderController(membershipOrderService);
+        ParkingMembershipOrderController controller = new ParkingMembershipOrderController(membershipOrderService, Mockito.mock(ParkingLotAdminMapper.class), Mockito.mock(ParkingCustomerMapper.class));
         AjaxResult result = controller.remove(new Long[] { 3L, 4L });
 
         assertEquals(200, result.get("code"));
@@ -182,7 +185,7 @@ class ParkingMembershipOrderControllerTest
         when(membershipOrderService.payMembershipOrder(any(ParkingMembershipOrder.class))).thenReturn(1);
 
         setLoginUserPermissions("parking:membership:pay");
-        ParkingMembershipOrderController controller = new ParkingMembershipOrderController(membershipOrderService);
+        ParkingMembershipOrderController controller = new ParkingMembershipOrderController(membershipOrderService, Mockito.mock(ParkingLotAdminMapper.class), Mockito.mock(ParkingCustomerMapper.class));
 
         ParkingMembershipOrder form = new ParkingMembershipOrder();
         form.setMembershipOrderId(50L);
@@ -201,7 +204,7 @@ class ParkingMembershipOrderControllerTest
         when(membershipOrderService.cancelMembershipOrder(any(ParkingMembershipOrder.class))).thenReturn(1);
 
         setLoginUserPermissions("parking:membership:cancel");
-        ParkingMembershipOrderController controller = new ParkingMembershipOrderController(membershipOrderService);
+        ParkingMembershipOrderController controller = new ParkingMembershipOrderController(membershipOrderService, Mockito.mock(ParkingLotAdminMapper.class), Mockito.mock(ParkingCustomerMapper.class));
 
         ParkingMembershipOrder form = new ParkingMembershipOrder();
         form.setMembershipOrderId(51L);
@@ -346,9 +349,23 @@ class ParkingMembershipOrderControllerTest
         }
 
         @Bean
-        ParkingMembershipOrderController parkingMembershipOrderController(IParkingMembershipOrderService membershipOrderService)
+        ParkingLotAdminMapper parkingLotAdminMapper()
         {
-            return new ParkingMembershipOrderController(membershipOrderService);
+            return Mockito.mock(ParkingLotAdminMapper.class);
+        }
+
+        @Bean
+        ParkingCustomerMapper parkingCustomerMapper()
+        {
+            return Mockito.mock(ParkingCustomerMapper.class);
+        }
+
+        @Bean
+        ParkingMembershipOrderController parkingMembershipOrderController(IParkingMembershipOrderService membershipOrderService,
+                                                                          ParkingLotAdminMapper parkingLotAdminMapper,
+                                                                          ParkingCustomerMapper parkingCustomerMapper)
+        {
+            return new ParkingMembershipOrderController(membershipOrderService, parkingLotAdminMapper, parkingCustomerMapper);
         }
     }
 }

@@ -10,6 +10,8 @@ public interface ParkingCustomerMapper
 
     ParkingCustomer selectParkingCustomerByCode(@Param("customerCode") String customerCode);
 
+    ParkingCustomer selectParkingCustomerByUserId(@Param("userId") Long userId);
+
     List<ParkingCustomer> selectParkingCustomerList(ParkingCustomer parkingCustomer);
 
     List<ParkingCustomer> selectParkingCustomerOptions();

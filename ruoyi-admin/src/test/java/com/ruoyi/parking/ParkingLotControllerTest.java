@@ -17,6 +17,7 @@ import com.ruoyi.common.core.domain.model.LoginUser;
 import com.ruoyi.framework.web.service.PermissionService;
 import com.ruoyi.parking.controller.ParkingLotController;
 import com.ruoyi.parking.domain.ParkingLot;
+import com.ruoyi.parking.mapper.ParkingLotAdminMapper;
 import com.ruoyi.parking.service.IParkingLotService;
 import java.util.Arrays;
 import java.util.Collections;
@@ -77,7 +78,8 @@ class ParkingLotControllerTest
         lot.setStatus("0");
         when(parkingLotService.selectParkingLotList(any(ParkingLot.class))).thenReturn(List.of(lot));
 
-        ParkingLotController controller = new ParkingLotController(parkingLotService);
+        setLoginUserPermissions("parking:lot:list");
+        ParkingLotController controller = new ParkingLotController(parkingLotService, Mockito.mock(ParkingLotAdminMapper.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         mockMvc.perform(get("/parking/lot/list")
@@ -105,7 +107,8 @@ class ParkingLotControllerTest
         lot.setLotName("Lot-B");
         when(parkingLotService.selectParkingLotById(6L)).thenReturn(lot);
 
-        ParkingLotController controller = new ParkingLotController(parkingLotService);
+        setLoginUserPermissions("parking:lot:query");
+        ParkingLotController controller = new ParkingLotController(parkingLotService, Mockito.mock(ParkingLotAdminMapper.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         mockMvc.perform(get("/parking/lot/6"))
@@ -126,7 +129,8 @@ class ParkingLotControllerTest
         lot.setLotName("Lot-C");
         when(parkingLotService.selectParkingLotOptions()).thenReturn(List.of(lot));
 
-        ParkingLotController controller = new ParkingLotController(parkingLotService);
+        setLoginUserPermissions("parking:lot:list");
+        ParkingLotController controller = new ParkingLotController(parkingLotService, Mockito.mock(ParkingLotAdminMapper.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         mockMvc.perform(get("/parking/lot/options"))
@@ -145,7 +149,7 @@ class ParkingLotControllerTest
         when(parkingLotService.insertParkingLot(any(ParkingLot.class))).thenReturn(1);
 
         setLoginUserPermissions("parking:lot:add");
-        ParkingLotController controller = new ParkingLotController(parkingLotService);
+        ParkingLotController controller = new ParkingLotController(parkingLotService, Mockito.mock(ParkingLotAdminMapper.class));
 
         ParkingLot form = new ParkingLot();
         form.setLotName("New Lot");
@@ -164,7 +168,7 @@ class ParkingLotControllerTest
         when(parkingLotService.updateParkingLot(any(ParkingLot.class))).thenReturn(1);
 
         setLoginUserPermissions("parking:lot:edit");
-        ParkingLotController controller = new ParkingLotController(parkingLotService);
+        ParkingLotController controller = new ParkingLotController(parkingLotService, Mockito.mock(ParkingLotAdminMapper.class));
 
         ParkingLot form = new ParkingLot();
         form.setLotId(100L);
@@ -183,7 +187,7 @@ class ParkingLotControllerTest
         IParkingLotService parkingLotService = Mockito.mock(IParkingLotService.class);
         when(parkingLotService.deleteParkingLotByIds(new Long[] { 3L, 4L })).thenReturn(2);
 
-        ParkingLotController controller = new ParkingLotController(parkingLotService);
+        ParkingLotController controller = new ParkingLotController(parkingLotService, Mockito.mock(ParkingLotAdminMapper.class));
         AjaxResult result = controller.remove(new Long[] { 3L, 4L });
 
         assertEquals(200, result.get("code"));
@@ -337,9 +341,16 @@ class ParkingLotControllerTest
         }
 
         @Bean
-        ParkingLotController parkingLotController(IParkingLotService parkingLotService)
+        ParkingLotAdminMapper parkingLotAdminMapper()
         {
-            return new ParkingLotController(parkingLotService);
+            return Mockito.mock(ParkingLotAdminMapper.class);
+        }
+
+        @Bean
+        ParkingLotController parkingLotController(IParkingLotService parkingLotService,
+                                                  ParkingLotAdminMapper parkingLotAdminMapper)
+        {
+            return new ParkingLotController(parkingLotService, parkingLotAdminMapper);
         }
     }
 }

@@ -5,8 +5,12 @@ import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.core.page.TableDataInfo;
 import com.ruoyi.common.enums.BusinessType;
+import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.parking.domain.ParkingMembershipOrder;
+import com.ruoyi.parking.mapper.ParkingCustomerMapper;
+import com.ruoyi.parking.mapper.ParkingLotAdminMapper;
 import com.ruoyi.parking.service.IParkingMembershipOrderService;
+import com.ruoyi.parking.util.ParkingAuthUtils;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -23,10 +27,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class ParkingMembershipOrderController extends BaseController
 {
     private final IParkingMembershipOrderService membershipOrderService;
+    private final ParkingLotAdminMapper parkingLotAdminMapper;
+    private final ParkingCustomerMapper parkingCustomerMapper;
 
-    public ParkingMembershipOrderController(IParkingMembershipOrderService membershipOrderService)
+    public ParkingMembershipOrderController(IParkingMembershipOrderService membershipOrderService,
+                                            ParkingLotAdminMapper parkingLotAdminMapper,
+                                            ParkingCustomerMapper parkingCustomerMapper)
     {
         this.membershipOrderService = membershipOrderService;
+        this.parkingLotAdminMapper = parkingLotAdminMapper;
+        this.parkingCustomerMapper = parkingCustomerMapper;
     }
 
     @PreAuthorize("@ss.hasAnyPermi('parking:membership:list,parking:overview:list')")
@@ -34,6 +44,21 @@ public class ParkingMembershipOrderController extends BaseController
     public TableDataInfo list(ParkingMembershipOrder order)
     {
         startPage();
+        if (!SecurityUtils.isAdmin(SecurityUtils.getUserId()))
+        {
+            if (ParkingAuthUtils.isLotAdmin())
+            {
+                Long scopedLotId = ParkingAuthUtils.resolveSingleLotId(parkingLotAdminMapper);
+                if (scopedLotId != null && order.getLotId() == null)
+                {
+                    order.setLotId(scopedLotId);
+                }
+            }
+            else if (ParkingAuthUtils.isCustomer())
+            {
+                order.setCustomerId(ParkingAuthUtils.resolveRequiredCustomerId(parkingCustomerMapper));
+            }
+        }
         return getDataTable(membershipOrderService.selectParkingMembershipOrderList(order));
     }
 
@@ -41,7 +66,9 @@ public class ParkingMembershipOrderController extends BaseController
     @GetMapping("/{membershipOrderId}")
     public AjaxResult getInfo(@PathVariable Long membershipOrderId)
     {
-        return success(membershipOrderService.selectParkingMembershipOrderById(membershipOrderId));
+        ParkingMembershipOrder order = membershipOrderService.selectParkingMembershipOrderById(membershipOrderId);
+        assertCurrentCustomerOwns(order);
+        return success(order);
     }
 
     @PreAuthorize("@ss.hasPermi('parking:membership:add')")
@@ -49,6 +76,10 @@ public class ParkingMembershipOrderController extends BaseController
     @PostMapping
     public AjaxResult add(@Validated @RequestBody ParkingMembershipOrder order)
     {
+        if (ParkingAuthUtils.isCustomer() && !SecurityUtils.isAdmin(SecurityUtils.getUserId()))
+        {
+            order.setCustomerId(ParkingAuthUtils.resolveRequiredCustomerId(parkingCustomerMapper));
+        }
         order.setCreateBy(getUsername());
         return toAjax(membershipOrderService.insertParkingMembershipOrder(order));
     }
@@ -67,6 +98,8 @@ public class ParkingMembershipOrderController extends BaseController
     @PutMapping("/pay")
     public AjaxResult pay(@RequestBody ParkingMembershipOrder form)
     {
+        assertCurrentCustomerOwns(membershipOrderService.selectParkingMembershipOrderById(
+            form.getMembershipOrderId()));
         form.setUpdateBy(getUsername());
         return toAjax(membershipOrderService.payMembershipOrder(form));
     }
@@ -76,6 +109,8 @@ public class ParkingMembershipOrderController extends BaseController
     @PutMapping("/cancel")
     public AjaxResult cancel(@RequestBody ParkingMembershipOrder form)
     {
+        assertCurrentCustomerOwns(membershipOrderService.selectParkingMembershipOrderById(
+            form.getMembershipOrderId()));
         form.setUpdateBy(getUsername());
         return toAjax(membershipOrderService.cancelMembershipOrder(form));
     }
@@ -86,5 +121,18 @@ public class ParkingMembershipOrderController extends BaseController
     public AjaxResult remove(@PathVariable Long[] orderIds)
     {
         return toAjax(membershipOrderService.deleteParkingMembershipOrderByIds(orderIds));
+    }
+
+    private void assertCurrentCustomerOwns(ParkingMembershipOrder order)
+    {
+        if (order == null || !ParkingAuthUtils.isCustomer() || SecurityUtils.isAdmin(SecurityUtils.getUserId()))
+        {
+            return;
+        }
+        Long customerId = ParkingAuthUtils.resolveRequiredCustomerId(parkingCustomerMapper);
+        if (!customerId.equals(order.getCustomerId()))
+        {
+            throw new com.ruoyi.common.exception.ServiceException("Membership order does not belong to current customer");
+        }
     }
 }

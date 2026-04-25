@@ -71,6 +71,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <if test="lotId != null">
             and t.lot_id = #{lotId}
         </if>
+        <if test="customerId != null">
+            and t.customer_id = #{customerId}
+        </if>
         <if test="vehiclePlateNo != null and vehiclePlateNo != ''">
             and t.vehicle_plate_no like concat('%', #{vehiclePlateNo}, '%')
         </if>

@@ -2,7 +2,9 @@ package com.ruoyi.parking.domain;
 
 import com.ruoyi.common.core.domain.BaseEntity;
 import java.math.BigDecimal;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 public class ParkingLot extends BaseEntity
 {
@@ -16,6 +18,8 @@ public class ParkingLot extends BaseEntity
     @NotBlank(message = "停车场地址不能为空")
     private String lotAddress;
 
+    @NotNull(message = "总车位数不能为空")
+    @Min(value = 1, message = "总车位数必须大于 0")
     private Integer totalSpaceCount;
 
     private Integer availableSpaceCount;

@@ -25,4 +25,6 @@ public interface ParkingSpaceMapper
     int countParkingSpaceByLotId(@Param("lotId") Long lotId);
 
     int countAvailableParkingSpaceByLotId(@Param("lotId") Long lotId);
+
+    int countOccupiedParkingSpaceByLotId(@Param("lotId") Long lotId);
 }

@@ -1,5 +1,6 @@
 package com.ruoyi.parking.domain;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.ruoyi.common.core.domain.BaseEntity;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -16,12 +17,16 @@ public class ParkingMonthlyOrder extends BaseEntity
 
     private Long vehicleId;
 
+    private String vehiclePlateNo;
+
     private Long lotId;
 
     private Integer monthCount;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime startTime;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime endTime;
 
     private BigDecimal originalAmount;
@@ -34,8 +39,10 @@ public class ParkingMonthlyOrder extends BaseEntity
 
     private String bizStatus;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime payTime;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime cancelTime;
 
     private String delFlag;
@@ -81,6 +88,16 @@ public class ParkingMonthlyOrder extends BaseEntity
     public void setVehicleId(Long vehicleId)
     {
         this.vehicleId = vehicleId;
+    }
+
+    public String getVehiclePlateNo()
+    {
+        return vehiclePlateNo;
+    }
+
+    public void setVehiclePlateNo(String vehiclePlateNo)
+    {
+        this.vehiclePlateNo = vehiclePlateNo;
     }
 
     public Long getLotId()

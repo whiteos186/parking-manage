@@ -8,6 +8,7 @@ import com.ruoyi.parking.domain.ParkingMembershipOrder;
 import com.ruoyi.parking.mapper.ParkingCustomerMapper;
 import com.ruoyi.parking.mapper.ParkingLotMapper;
 import com.ruoyi.parking.mapper.ParkingMembershipOrderMapper;
+import com.ruoyi.parking.mapper.ParkingUserVehicleMapper;
 import com.ruoyi.parking.service.IParkingMembershipOrderService;
 import com.ruoyi.parking.service.IParkingPaymentRecordService;
 import java.math.BigDecimal;
@@ -25,16 +26,19 @@ public class ParkingMembershipOrderServiceImpl implements IParkingMembershipOrde
     private final ParkingMembershipOrderMapper membershipOrderMapper;
     private final ParkingLotMapper parkingLotMapper;
     private final ParkingCustomerMapper parkingCustomerMapper;
+    private final ParkingUserVehicleMapper parkingUserVehicleMapper;
     private final IParkingPaymentRecordService parkingPaymentRecordService;
 
     public ParkingMembershipOrderServiceImpl(ParkingMembershipOrderMapper membershipOrderMapper,
         ParkingLotMapper parkingLotMapper,
         ParkingCustomerMapper parkingCustomerMapper,
+        ParkingUserVehicleMapper parkingUserVehicleMapper,
         IParkingPaymentRecordService parkingPaymentRecordService)
     {
         this.membershipOrderMapper = membershipOrderMapper;
         this.parkingLotMapper = parkingLotMapper;
         this.parkingCustomerMapper = parkingCustomerMapper;
+        this.parkingUserVehicleMapper = parkingUserVehicleMapper;
         this.parkingPaymentRecordService = parkingPaymentRecordService;
     }
 
@@ -78,6 +82,20 @@ public class ParkingMembershipOrderServiceImpl implements IParkingMembershipOrde
         if (lot == null)
         {
             throw new ServiceException("停车场不存在");
+        }
+        if (order.getCustomerId() == null
+            || parkingCustomerMapper.selectParkingCustomerById(order.getCustomerId()) == null)
+        {
+            throw new ServiceException("Customer is required");
+        }
+        if (order.getVehicleId() != null)
+        {
+            com.ruoyi.parking.domain.ParkingUserVehicle vehicle =
+                parkingUserVehicleMapper.selectParkingUserVehicleById(order.getVehicleId());
+            if (vehicle == null || !order.getCustomerId().equals(vehicle.getCustomerId()))
+            {
+                throw new ServiceException("Vehicle does not belong to order customer");
+            }
         }
         // Default amounts
         if (order.getOriginalAmount() == null)

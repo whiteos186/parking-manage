@@ -17,6 +17,8 @@ import com.ruoyi.common.core.domain.model.LoginUser;
 import com.ruoyi.framework.web.service.PermissionService;
 import com.ruoyi.parking.controller.ParkingMonthlyOrderController;
 import com.ruoyi.parking.domain.ParkingMonthlyOrder;
+import com.ruoyi.parking.mapper.ParkingCustomerMapper;
+import com.ruoyi.parking.mapper.ParkingLotAdminMapper;
 import com.ruoyi.parking.service.IParkingMonthlyOrderService;
 import java.util.Arrays;
 import java.util.Collections;
@@ -78,7 +80,8 @@ class ParkingMonthlyOrderControllerTest
         order.setBizStatus("0");
         when(service.selectParkingMonthlyOrderList(any(ParkingMonthlyOrder.class))).thenReturn(List.of(order));
 
-        ParkingMonthlyOrderController controller = new ParkingMonthlyOrderController(service);
+        setLoginUserPermissions("parking:monthly:list");
+        ParkingMonthlyOrderController controller = new ParkingMonthlyOrderController(service, Mockito.mock(ParkingLotAdminMapper.class), Mockito.mock(ParkingCustomerMapper.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         mockMvc.perform(get("/parking/monthly/list")
@@ -106,7 +109,7 @@ class ParkingMonthlyOrderControllerTest
         order.setOrderNo("MO20240601000001");
         when(service.selectParkingMonthlyOrderById(6L)).thenReturn(order);
 
-        ParkingMonthlyOrderController controller = new ParkingMonthlyOrderController(service);
+        ParkingMonthlyOrderController controller = new ParkingMonthlyOrderController(service, Mockito.mock(ParkingLotAdminMapper.class), Mockito.mock(ParkingCustomerMapper.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         mockMvc.perform(get("/parking/monthly/6"))
@@ -125,7 +128,7 @@ class ParkingMonthlyOrderControllerTest
         when(service.insertParkingMonthlyOrder(any(ParkingMonthlyOrder.class))).thenReturn(1);
 
         setLoginUserPermissions("parking:monthly:add");
-        ParkingMonthlyOrderController controller = new ParkingMonthlyOrderController(service);
+        ParkingMonthlyOrderController controller = new ParkingMonthlyOrderController(service, Mockito.mock(ParkingLotAdminMapper.class), Mockito.mock(ParkingCustomerMapper.class));
 
         ParkingMonthlyOrder form = new ParkingMonthlyOrder();
         form.setLotId(1L);
@@ -147,7 +150,7 @@ class ParkingMonthlyOrderControllerTest
         when(service.updateParkingMonthlyOrder(any(ParkingMonthlyOrder.class))).thenReturn(1);
 
         setLoginUserPermissions("parking:monthly:edit");
-        ParkingMonthlyOrderController controller = new ParkingMonthlyOrderController(service);
+        ParkingMonthlyOrderController controller = new ParkingMonthlyOrderController(service, Mockito.mock(ParkingLotAdminMapper.class), Mockito.mock(ParkingCustomerMapper.class));
 
         ParkingMonthlyOrder form = new ParkingMonthlyOrder();
         form.setMonthlyOrderId(10L);
@@ -168,7 +171,7 @@ class ParkingMonthlyOrderControllerTest
         IParkingMonthlyOrderService service = Mockito.mock(IParkingMonthlyOrderService.class);
         when(service.deleteParkingMonthlyOrderByIds(new Long[] { 3L, 4L })).thenReturn(2);
 
-        ParkingMonthlyOrderController controller = new ParkingMonthlyOrderController(service);
+        ParkingMonthlyOrderController controller = new ParkingMonthlyOrderController(service, Mockito.mock(ParkingLotAdminMapper.class), Mockito.mock(ParkingCustomerMapper.class));
         AjaxResult result = controller.remove(new Long[] { 3L, 4L });
 
         assertEquals(200, result.get("code"));
@@ -182,7 +185,7 @@ class ParkingMonthlyOrderControllerTest
         when(service.payMonthlyOrder(any(ParkingMonthlyOrder.class))).thenReturn(1);
 
         setLoginUserPermissions("parking:monthly:pay");
-        ParkingMonthlyOrderController controller = new ParkingMonthlyOrderController(service);
+        ParkingMonthlyOrderController controller = new ParkingMonthlyOrderController(service, Mockito.mock(ParkingLotAdminMapper.class), Mockito.mock(ParkingCustomerMapper.class));
 
         ParkingMonthlyOrder form = new ParkingMonthlyOrder();
         form.setMonthlyOrderId(20L);
@@ -202,7 +205,7 @@ class ParkingMonthlyOrderControllerTest
         when(service.cancelMonthlyOrder(any(ParkingMonthlyOrder.class))).thenReturn(1);
 
         setLoginUserPermissions("parking:monthly:cancel");
-        ParkingMonthlyOrderController controller = new ParkingMonthlyOrderController(service);
+        ParkingMonthlyOrderController controller = new ParkingMonthlyOrderController(service, Mockito.mock(ParkingLotAdminMapper.class), Mockito.mock(ParkingCustomerMapper.class));
 
         ParkingMonthlyOrder form = new ParkingMonthlyOrder();
         form.setMonthlyOrderId(21L);
@@ -347,9 +350,23 @@ class ParkingMonthlyOrderControllerTest
         }
 
         @Bean
-        ParkingMonthlyOrderController parkingMonthlyOrderController(IParkingMonthlyOrderService parkingMonthlyOrderService)
+        ParkingLotAdminMapper parkingLotAdminMapper()
         {
-            return new ParkingMonthlyOrderController(parkingMonthlyOrderService);
+            return Mockito.mock(ParkingLotAdminMapper.class);
+        }
+
+        @Bean
+        ParkingCustomerMapper parkingCustomerMapper()
+        {
+            return Mockito.mock(ParkingCustomerMapper.class);
+        }
+
+        @Bean
+        ParkingMonthlyOrderController parkingMonthlyOrderController(IParkingMonthlyOrderService parkingMonthlyOrderService,
+                                                                    ParkingLotAdminMapper parkingLotAdminMapper,
+                                                                    ParkingCustomerMapper parkingCustomerMapper)
+        {
+            return new ParkingMonthlyOrderController(parkingMonthlyOrderService, parkingLotAdminMapper, parkingCustomerMapper);
         }
     }
 }

@@ -2,7 +2,6 @@ package com.ruoyi.parking.domain;
 
 import com.ruoyi.common.core.domain.BaseEntity;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import java.util.Date;
 
 public class ParkingUserVehicle extends BaseEntity
@@ -11,7 +10,6 @@ public class ParkingUserVehicle extends BaseEntity
 
     private Long vehicleId;
 
-    @NotNull(message = "用户ID不能为空")
     private Long customerId;
 
     @NotBlank(message = "车牌号不能为空")

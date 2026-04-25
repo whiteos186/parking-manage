@@ -17,6 +17,7 @@ import com.ruoyi.common.core.domain.model.LoginUser;
 import com.ruoyi.framework.web.service.PermissionService;
 import com.ruoyi.parking.controller.ParkingSpaceController;
 import com.ruoyi.parking.domain.ParkingSpace;
+import com.ruoyi.parking.mapper.ParkingLotAdminMapper;
 import com.ruoyi.parking.service.IParkingSpaceService;
 import java.util.Arrays;
 import java.util.Collections;
@@ -78,7 +79,8 @@ class ParkingSpaceControllerTest
         space.setStatus("0");
         when(parkingSpaceService.selectParkingSpaceList(any(ParkingSpace.class))).thenReturn(List.of(space));
 
-        ParkingSpaceController controller = new ParkingSpaceController(parkingSpaceService);
+        setLoginUserPermissions("parking:space:list");
+        ParkingSpaceController controller = new ParkingSpaceController(parkingSpaceService, Mockito.mock(ParkingLotAdminMapper.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         mockMvc.perform(get("/parking/space/list")
@@ -109,7 +111,7 @@ class ParkingSpaceControllerTest
         space.setSpaceCode("B2-010");
         when(parkingSpaceService.selectParkingSpaceById(6L)).thenReturn(space);
 
-        ParkingSpaceController controller = new ParkingSpaceController(parkingSpaceService);
+        ParkingSpaceController controller = new ParkingSpaceController(parkingSpaceService, Mockito.mock(ParkingLotAdminMapper.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         mockMvc.perform(get("/parking/space/6"))
@@ -128,7 +130,7 @@ class ParkingSpaceControllerTest
         when(parkingSpaceService.insertParkingSpace(any(ParkingSpace.class))).thenReturn(1);
 
         setLoginUserPermissions("parking:space:add");
-        ParkingSpaceController controller = new ParkingSpaceController(parkingSpaceService);
+        ParkingSpaceController controller = new ParkingSpaceController(parkingSpaceService, Mockito.mock(ParkingLotAdminMapper.class));
 
         ParkingSpace form = new ParkingSpace();
         form.setSpaceCode("C3-001");
@@ -147,7 +149,7 @@ class ParkingSpaceControllerTest
         when(parkingSpaceService.updateParkingSpace(any(ParkingSpace.class))).thenReturn(1);
 
         setLoginUserPermissions("parking:space:edit");
-        ParkingSpaceController controller = new ParkingSpaceController(parkingSpaceService);
+        ParkingSpaceController controller = new ParkingSpaceController(parkingSpaceService, Mockito.mock(ParkingLotAdminMapper.class));
 
         ParkingSpace form = new ParkingSpace();
         form.setSpaceId(100L);
@@ -166,7 +168,7 @@ class ParkingSpaceControllerTest
         IParkingSpaceService parkingSpaceService = Mockito.mock(IParkingSpaceService.class);
         when(parkingSpaceService.deleteParkingSpaceByIds(new Long[] { 3L, 4L })).thenReturn(2);
 
-        ParkingSpaceController controller = new ParkingSpaceController(parkingSpaceService);
+        ParkingSpaceController controller = new ParkingSpaceController(parkingSpaceService, Mockito.mock(ParkingLotAdminMapper.class));
         AjaxResult result = controller.remove(new Long[] { 3L, 4L });
 
         assertEquals(200, result.get("code"));
@@ -287,9 +289,16 @@ class ParkingSpaceControllerTest
         }
 
         @Bean
-        ParkingSpaceController parkingSpaceController(IParkingSpaceService parkingSpaceService)
+        ParkingLotAdminMapper parkingLotAdminMapper()
         {
-            return new ParkingSpaceController(parkingSpaceService);
+            return Mockito.mock(ParkingLotAdminMapper.class);
+        }
+
+        @Bean
+        ParkingSpaceController parkingSpaceController(IParkingSpaceService parkingSpaceService,
+                                                      ParkingLotAdminMapper parkingLotAdminMapper)
+        {
+            return new ParkingSpaceController(parkingSpaceService, parkingLotAdminMapper);
         }
     }
 }

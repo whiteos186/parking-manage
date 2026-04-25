@@ -5,8 +5,12 @@ import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.core.page.TableDataInfo;
 import com.ruoyi.common.enums.BusinessType;
+import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.parking.domain.ParkingMonthlyOrder;
+import com.ruoyi.parking.mapper.ParkingCustomerMapper;
+import com.ruoyi.parking.mapper.ParkingLotAdminMapper;
 import com.ruoyi.parking.service.IParkingMonthlyOrderService;
+import com.ruoyi.parking.util.ParkingAuthUtils;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -23,10 +27,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class ParkingMonthlyOrderController extends BaseController
 {
     private final IParkingMonthlyOrderService parkingMonthlyOrderService;
+    private final ParkingLotAdminMapper parkingLotAdminMapper;
+    private final ParkingCustomerMapper parkingCustomerMapper;
 
-    public ParkingMonthlyOrderController(IParkingMonthlyOrderService parkingMonthlyOrderService)
+    public ParkingMonthlyOrderController(IParkingMonthlyOrderService parkingMonthlyOrderService,
+                                         ParkingLotAdminMapper parkingLotAdminMapper,
+                                         ParkingCustomerMapper parkingCustomerMapper)
     {
         this.parkingMonthlyOrderService = parkingMonthlyOrderService;
+        this.parkingLotAdminMapper = parkingLotAdminMapper;
+        this.parkingCustomerMapper = parkingCustomerMapper;
     }
 
     @PreAuthorize("@ss.hasAnyPermi('parking:monthly:list,parking:overview:list')")
@@ -34,6 +44,21 @@ public class ParkingMonthlyOrderController extends BaseController
     public TableDataInfo list(ParkingMonthlyOrder parkingMonthlyOrder)
     {
         startPage();
+        if (!SecurityUtils.isAdmin(SecurityUtils.getUserId()))
+        {
+            if (ParkingAuthUtils.isLotAdmin())
+            {
+                Long scopedLotId = ParkingAuthUtils.resolveSingleLotId(parkingLotAdminMapper);
+                if (scopedLotId != null && parkingMonthlyOrder.getLotId() == null)
+                {
+                    parkingMonthlyOrder.setLotId(scopedLotId);
+                }
+            }
+            else if (ParkingAuthUtils.isCustomer())
+            {
+                parkingMonthlyOrder.setCustomerId(ParkingAuthUtils.resolveRequiredCustomerId(parkingCustomerMapper));
+            }
+        }
         return getDataTable(parkingMonthlyOrderService.selectParkingMonthlyOrderList(parkingMonthlyOrder));
     }
 
@@ -41,7 +66,9 @@ public class ParkingMonthlyOrderController extends BaseController
     @GetMapping("/{monthlyOrderId}")
     public AjaxResult getInfo(@PathVariable Long monthlyOrderId)
     {
-        return success(parkingMonthlyOrderService.selectParkingMonthlyOrderById(monthlyOrderId));
+        ParkingMonthlyOrder order = parkingMonthlyOrderService.selectParkingMonthlyOrderById(monthlyOrderId);
+        assertCurrentCustomerOwns(order);
+        return success(order);
     }
 
     @PreAuthorize("@ss.hasPermi('parking:monthly:add')")
@@ -49,7 +76,12 @@ public class ParkingMonthlyOrderController extends BaseController
     @PostMapping
     public AjaxResult add(@Validated @RequestBody ParkingMonthlyOrder parkingMonthlyOrder)
     {
+        if (ParkingAuthUtils.isCustomer() && !SecurityUtils.isAdmin(SecurityUtils.getUserId()))
+        {
+            parkingMonthlyOrder.setCustomerId(ParkingAuthUtils.resolveRequiredCustomerId(parkingCustomerMapper));
+        }
         parkingMonthlyOrder.setCreateBy(getUsername());
+        logger.info("入参", parkingMonthlyOrder);
         return toAjax(parkingMonthlyOrderService.insertParkingMonthlyOrder(parkingMonthlyOrder));
     }
 
@@ -67,6 +99,8 @@ public class ParkingMonthlyOrderController extends BaseController
     @PutMapping("/pay")
     public AjaxResult pay(@RequestBody ParkingMonthlyOrder parkingMonthlyOrder)
     {
+        assertCurrentCustomerOwns(parkingMonthlyOrderService.selectParkingMonthlyOrderById(
+            parkingMonthlyOrder.getMonthlyOrderId()));
         parkingMonthlyOrder.setUpdateBy(getUsername());
         return toAjax(parkingMonthlyOrderService.payMonthlyOrder(parkingMonthlyOrder));
     }
@@ -76,6 +110,8 @@ public class ParkingMonthlyOrderController extends BaseController
     @PutMapping("/cancel")
     public AjaxResult cancel(@RequestBody ParkingMonthlyOrder parkingMonthlyOrder)
     {
+        assertCurrentCustomerOwns(parkingMonthlyOrderService.selectParkingMonthlyOrderById(
+            parkingMonthlyOrder.getMonthlyOrderId()));
         parkingMonthlyOrder.setUpdateBy(getUsername());
         return toAjax(parkingMonthlyOrderService.cancelMonthlyOrder(parkingMonthlyOrder));
     }
@@ -86,5 +122,18 @@ public class ParkingMonthlyOrderController extends BaseController
     public AjaxResult remove(@PathVariable Long[] monthlyOrderIds)
     {
         return toAjax(parkingMonthlyOrderService.deleteParkingMonthlyOrderByIds(monthlyOrderIds));
+    }
+
+    private void assertCurrentCustomerOwns(ParkingMonthlyOrder order)
+    {
+        if (order == null || !ParkingAuthUtils.isCustomer() || SecurityUtils.isAdmin(SecurityUtils.getUserId()))
+        {
+            return;
+        }
+        Long customerId = ParkingAuthUtils.resolveRequiredCustomerId(parkingCustomerMapper);
+        if (!customerId.equals(order.getCustomerId()))
+        {
+            throw new com.ruoyi.common.exception.ServiceException("Monthly order does not belong to current customer");
+        }
     }
 }

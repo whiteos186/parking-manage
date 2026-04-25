@@ -43,7 +43,8 @@ public class ParkingSpaceServiceImpl implements IParkingSpaceService
     public int insertParkingSpace(ParkingSpace parkingSpace)
     {
         applySpaceInsertDefaults(parkingSpace);
-        validateLotExists(parkingSpace.getLotId());
+        ParkingLot parkingLot = validateLotExists(parkingSpace.getLotId());
+        validateCapacity(parkingLot);
         validateUniqueSpaceCode(parkingSpace);
         int rows = parkingSpaceMapper.insertParkingSpace(parkingSpace);
         syncLotSpaceStats(parkingSpace.getLotId(), parkingSpace.getCreateBy());
@@ -89,12 +90,27 @@ public class ParkingSpaceServiceImpl implements IParkingSpaceService
         return rows;
     }
 
-    private void validateLotExists(Long lotId)
+    private ParkingLot validateLotExists(Long lotId)
     {
         ParkingLot parkingLot = parkingLotMapper.selectParkingLotById(lotId);
         if (parkingLot == null)
         {
             throw new ServiceException("停车场不存在");
+        }
+        return parkingLot;
+    }
+
+    private void validateCapacity(ParkingLot parkingLot)
+    {
+        Integer total = parkingLot.getTotalSpaceCount();
+        if (total == null || total < 1)
+        {
+            return;
+        }
+        int existing = parkingSpaceMapper.countParkingSpaceByLotId(parkingLot.getLotId());
+        if (existing >= total)
+        {
+            throw new ServiceException("已达到该停车场的总车位数（" + total + " 个），无法再新增");
         }
     }
 
@@ -120,9 +136,14 @@ public class ParkingSpaceServiceImpl implements IParkingSpaceService
         {
             return;
         }
-        int totalSpaceCount = parkingSpaceMapper.countParkingSpaceByLotId(lotId);
-        int availableSpaceCount = parkingSpaceMapper.countAvailableParkingSpaceByLotId(lotId);
-        parkingLotMapper.updateParkingLotSpaceStats(lotId, totalSpaceCount, availableSpaceCount, updateBy);
+        ParkingLot parkingLot = parkingLotMapper.selectParkingLotById(lotId);
+        if (parkingLot == null || parkingLot.getTotalSpaceCount() == null)
+        {
+            return;
+        }
+        int occupied = parkingSpaceMapper.countOccupiedParkingSpaceByLotId(lotId);
+        int availableSpaceCount = Math.max(parkingLot.getTotalSpaceCount() - occupied, 0);
+        parkingLotMapper.updateParkingLotSpaceStats(lotId, availableSpaceCount, updateBy);
     }
 
     private void applySpaceInsertDefaults(ParkingSpace parkingSpace)

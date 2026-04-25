@@ -99,6 +99,14 @@ public class ParkingUserVehicleServiceImpl implements IParkingUserVehicleService
 
     private void applyInsertDefaults(ParkingUserVehicle parkingUserVehicle)
     {
+        if (parkingUserVehicle.getCustomerId() == null)
+        {
+            throw new ServiceException("Customer is required");
+        }
+        if (StringUtils.isEmpty(parkingUserVehicle.getPlateNo()))
+        {
+            throw new ServiceException("Plate number is required");
+        }
         if (StringUtils.isEmpty(parkingUserVehicle.getVehicleType()))
         {
             parkingUserVehicle.setVehicleType("1");

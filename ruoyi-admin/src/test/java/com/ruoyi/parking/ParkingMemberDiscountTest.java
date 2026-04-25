@@ -1,9 +1,12 @@
 package com.ruoyi.parking;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.parking.domain.ParkingCustomer;
+import com.ruoyi.parking.domain.dto.ParkingSettingsDto;
 import com.ruoyi.parking.util.ParkingMemberDiscountUtils;
 import java.math.BigDecimal;
 import java.util.Calendar;
@@ -15,26 +18,26 @@ class ParkingMemberDiscountTest
     private static final BigDecimal AMOUNT_100 = new BigDecimal("100.00");
 
     @Test
-    void silverMemberGets5PercentDiscount()
+    void silverMemberGetsConfiguredDiscount()
     {
         ParkingCustomer customer = activeMember("1");
-        BigDecimal discount = ParkingMemberDiscountUtils.calculateDiscount(AMOUNT_100, customer);
+        BigDecimal discount = ParkingMemberDiscountUtils.calculateDiscount(AMOUNT_100, customer, enabledDiscount());
         assertEquals(new BigDecimal("5.00"), discount);
     }
 
     @Test
-    void goldMemberGets10PercentDiscount()
+    void goldMemberGetsConfiguredDiscount()
     {
         ParkingCustomer customer = activeMember("2");
-        BigDecimal discount = ParkingMemberDiscountUtils.calculateDiscount(AMOUNT_100, customer);
+        BigDecimal discount = ParkingMemberDiscountUtils.calculateDiscount(AMOUNT_100, customer, enabledDiscount());
         assertEquals(new BigDecimal("10.00"), discount);
     }
 
     @Test
-    void platinumMemberGets15PercentDiscount()
+    void platinumMemberGetsConfiguredDiscount()
     {
         ParkingCustomer customer = activeMember("3");
-        BigDecimal discount = ParkingMemberDiscountUtils.calculateDiscount(AMOUNT_100, customer);
+        BigDecimal discount = ParkingMemberDiscountUtils.calculateDiscount(AMOUNT_100, customer, enabledDiscount());
         assertEquals(new BigDecimal("15.00"), discount);
     }
 
@@ -45,7 +48,7 @@ class ParkingMemberDiscountTest
         customer.setIsMember("0");
         customer.setMemberType("1");
         customer.setMemberExpireTime(futureDate());
-        BigDecimal discount = ParkingMemberDiscountUtils.calculateDiscount(AMOUNT_100, customer);
+        BigDecimal discount = ParkingMemberDiscountUtils.calculateDiscount(AMOUNT_100, customer, enabledDiscount());
         assertEquals(BigDecimal.ZERO, discount);
     }
 
@@ -55,18 +58,17 @@ class ParkingMemberDiscountTest
         ParkingCustomer customer = new ParkingCustomer();
         customer.setIsMember("1");
         customer.setMemberType("2");
-        // 到期时间设为昨天
         Calendar cal = Calendar.getInstance();
         cal.add(Calendar.DAY_OF_YEAR, -1);
         customer.setMemberExpireTime(cal.getTime());
-        BigDecimal discount = ParkingMemberDiscountUtils.calculateDiscount(AMOUNT_100, customer);
+        BigDecimal discount = ParkingMemberDiscountUtils.calculateDiscount(AMOUNT_100, customer, enabledDiscount());
         assertEquals(BigDecimal.ZERO, discount);
     }
 
     @Test
     void nullCustomerGetsNoDiscount()
     {
-        BigDecimal discount = ParkingMemberDiscountUtils.calculateDiscount(AMOUNT_100, null);
+        BigDecimal discount = ParkingMemberDiscountUtils.calculateDiscount(AMOUNT_100, null, enabledDiscount());
         assertEquals(BigDecimal.ZERO, discount);
     }
 
@@ -74,18 +76,39 @@ class ParkingMemberDiscountTest
     void zeroAmountGetsNoDiscount()
     {
         ParkingCustomer customer = activeMember("1");
-        BigDecimal discount = ParkingMemberDiscountUtils.calculateDiscount(BigDecimal.ZERO, customer);
+        BigDecimal discount = ParkingMemberDiscountUtils.calculateDiscount(BigDecimal.ZERO, customer, enabledDiscount());
         assertEquals(BigDecimal.ZERO, discount);
     }
 
     @Test
-    void payAmountCorrectlyReducedByDiscount()
+    void disabledMemberDiscountReturnsZero()
     {
-        ParkingCustomer customer = activeMember("2"); // 金卡 90折
+        ParkingCustomer customer = activeMember("2");
+        BigDecimal discount = ParkingMemberDiscountUtils.calculateDiscount(AMOUNT_100, customer, disabledDiscount());
+        assertEquals(BigDecimal.ZERO, discount);
+    }
+
+    @Test
+    void missingConfiguredRateThrowsException()
+    {
+        ParkingCustomer customer = activeMember("2");
+        ParkingSettingsDto.MemberDiscount memberDiscount = new ParkingSettingsDto.MemberDiscount();
+        memberDiscount.setMemberDiscountEnabled(Boolean.TRUE);
+        memberDiscount.setSilverRate(new BigDecimal("0.05"));
+        memberDiscount.setPlatinumRate(new BigDecimal("0.15"));
+
+        assertThrows(ServiceException.class,
+            () -> ParkingMemberDiscountUtils.calculateDiscount(AMOUNT_100, customer, memberDiscount));
+    }
+
+    @Test
+    void payAmountCorrectlyReducedByConfiguredDiscount()
+    {
+        ParkingCustomer customer = activeMember("2");
         BigDecimal original = new BigDecimal("380.00");
-        BigDecimal discount = ParkingMemberDiscountUtils.calculateDiscount(original, customer);
+        BigDecimal discount = ParkingMemberDiscountUtils.calculateDiscount(original, customer, enabledDiscount());
         BigDecimal payAmount = original.subtract(discount);
-        assertTrue(discount.compareTo(BigDecimal.ZERO) > 0, "Expected discount > 0 for active member");
+        assertTrue(discount.compareTo(BigDecimal.ZERO) > 0);
         assertEquals(new BigDecimal("342.00"), payAmount);
     }
 
@@ -103,5 +126,22 @@ class ParkingMemberDiscountTest
         Calendar cal = Calendar.getInstance();
         cal.add(Calendar.DAY_OF_YEAR, 365);
         return cal.getTime();
+    }
+
+    private ParkingSettingsDto.MemberDiscount enabledDiscount()
+    {
+        ParkingSettingsDto.MemberDiscount memberDiscount = new ParkingSettingsDto.MemberDiscount();
+        memberDiscount.setMemberDiscountEnabled(Boolean.TRUE);
+        memberDiscount.setSilverRate(new BigDecimal("0.05"));
+        memberDiscount.setGoldRate(new BigDecimal("0.10"));
+        memberDiscount.setPlatinumRate(new BigDecimal("0.15"));
+        return memberDiscount;
+    }
+
+    private ParkingSettingsDto.MemberDiscount disabledDiscount()
+    {
+        ParkingSettingsDto.MemberDiscount memberDiscount = enabledDiscount();
+        memberDiscount.setMemberDiscountEnabled(Boolean.FALSE);
+        return memberDiscount;
     }
 }

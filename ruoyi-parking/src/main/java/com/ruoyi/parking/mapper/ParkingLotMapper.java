@@ -18,6 +18,6 @@ public interface ParkingLotMapper
 
     int deleteParkingLotByIds(@Param("lotIds") Long[] lotIds);
 
-    int updateParkingLotSpaceStats(@Param("lotId") Long lotId, @Param("totalSpaceCount") int totalSpaceCount,
+    int updateParkingLotSpaceStats(@Param("lotId") Long lotId,
         @Param("availableSpaceCount") int availableSpaceCount, @Param("updateBy") String updateBy);
 }

@@ -5,8 +5,12 @@ import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.core.page.TableDataInfo;
 import com.ruoyi.common.enums.BusinessType;
+import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.parking.domain.ParkingCustomer;
+import com.ruoyi.parking.mapper.ParkingCustomerMapper;
 import com.ruoyi.parking.service.IParkingCustomerService;
+import com.ruoyi.parking.util.ParkingAuthUtils;
+import java.util.Collections;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -23,10 +27,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class ParkingCustomerController extends BaseController
 {
     private final IParkingCustomerService parkingCustomerService;
+    private final ParkingCustomerMapper parkingCustomerMapper;
 
-    public ParkingCustomerController(IParkingCustomerService parkingCustomerService)
+    public ParkingCustomerController(IParkingCustomerService parkingCustomerService,
+                                     ParkingCustomerMapper parkingCustomerMapper)
     {
         this.parkingCustomerService = parkingCustomerService;
+        this.parkingCustomerMapper = parkingCustomerMapper;
     }
 
     @PreAuthorize("@ss.hasAnyPermi('parking:customer:list,parking:overview:list')")
@@ -34,6 +41,10 @@ public class ParkingCustomerController extends BaseController
     public TableDataInfo list(ParkingCustomer parkingCustomer)
     {
         startPage();
+        if (ParkingAuthUtils.isCustomer() && !SecurityUtils.isAdmin(SecurityUtils.getUserId()))
+        {
+            parkingCustomer.setCustomerId(ParkingAuthUtils.resolveRequiredCustomerId(parkingCustomerMapper));
+        }
         return getDataTable(parkingCustomerService.selectParkingCustomerList(parkingCustomer));
     }
 
@@ -48,6 +59,10 @@ public class ParkingCustomerController extends BaseController
     @GetMapping("/options")
     public AjaxResult options()
     {
+        if (ParkingAuthUtils.isCustomer() && !SecurityUtils.isAdmin(SecurityUtils.getUserId()))
+        {
+            return success(Collections.singletonList(ParkingAuthUtils.resolveRequiredCustomer(parkingCustomerMapper)));
+        }
         return success(parkingCustomerService.selectParkingCustomerOptions());
     }
 

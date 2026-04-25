@@ -49,6 +49,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <select id="selectParkingLotList" parameterType="ParkingLot" resultMap="ParkingLotResult">
         <include refid="selectParkingLotColumns"/>
         where del_flag = '0'
+        <if test="lotId != null">
+            and lot_id = #{lotId}
+        </if>
         <if test="lotName != null and lotName != ''">
             and lot_name like concat('%', #{lotName}, '%')
         </if>
@@ -124,8 +127,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 
     <update id="updateParkingLotSpaceStats">
         update parking_lot
-        set total_space_count = #{totalSpaceCount},
-            available_space_count = #{availableSpaceCount},
+        set available_space_count = #{availableSpaceCount},
             update_time = sysdate()
             <if test="updateBy != null and updateBy != ''">
                 , update_by = #{updateBy}

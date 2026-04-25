@@ -18,6 +18,8 @@ import com.ruoyi.common.core.domain.model.LoginUser;
 import com.ruoyi.framework.web.service.PermissionService;
 import com.ruoyi.parking.controller.ParkingTempOrderController;
 import com.ruoyi.parking.domain.ParkingTempOrder;
+import com.ruoyi.parking.mapper.ParkingCustomerMapper;
+import com.ruoyi.parking.mapper.ParkingLotAdminMapper;
 import com.ruoyi.parking.service.IParkingTempOrderService;
 import java.util.Arrays;
 import java.util.Collections;
@@ -79,7 +81,8 @@ class ParkingTempOrderControllerTest
         order.setBizStatus("0");
         when(service.selectParkingTempOrderList(any(ParkingTempOrder.class))).thenReturn(List.of(order));
 
-        ParkingTempOrderController controller = new ParkingTempOrderController(service);
+        setLoginUserPermissions("parking:temp:list");
+        ParkingTempOrderController controller = new ParkingTempOrderController(service, Mockito.mock(ParkingLotAdminMapper.class), Mockito.mock(ParkingCustomerMapper.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         mockMvc.perform(get("/parking/temp/list")
@@ -108,7 +111,7 @@ class ParkingTempOrderControllerTest
         order.setVehiclePlateNo("京B99999");
         when(service.selectParkingTempOrderById(5L)).thenReturn(order);
 
-        ParkingTempOrderController controller = new ParkingTempOrderController(service);
+        ParkingTempOrderController controller = new ParkingTempOrderController(service, Mockito.mock(ParkingLotAdminMapper.class), Mockito.mock(ParkingCustomerMapper.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         mockMvc.perform(get("/parking/temp/5"))
@@ -127,7 +130,7 @@ class ParkingTempOrderControllerTest
         when(service.insertParkingTempOrder(any(ParkingTempOrder.class))).thenReturn(1);
 
         setLoginUserPermissions("parking:temp:add");
-        ParkingTempOrderController controller = new ParkingTempOrderController(service);
+        ParkingTempOrderController controller = new ParkingTempOrderController(service, Mockito.mock(ParkingLotAdminMapper.class), Mockito.mock(ParkingCustomerMapper.class));
 
         ParkingTempOrder form = new ParkingTempOrder();
         form.setLotId(10L);
@@ -149,7 +152,7 @@ class ParkingTempOrderControllerTest
         when(service.updateParkingTempOrder(any(ParkingTempOrder.class))).thenReturn(1);
 
         setLoginUserPermissions("parking:temp:edit");
-        ParkingTempOrderController controller = new ParkingTempOrderController(service);
+        ParkingTempOrderController controller = new ParkingTempOrderController(service, Mockito.mock(ParkingLotAdminMapper.class), Mockito.mock(ParkingCustomerMapper.class));
 
         ParkingTempOrder form = new ParkingTempOrder();
         form.setTempOrderId(20L);
@@ -170,7 +173,7 @@ class ParkingTempOrderControllerTest
         IParkingTempOrderService service = Mockito.mock(IParkingTempOrderService.class);
         when(service.deleteParkingTempOrderByIds(new Long[] { 7L, 8L })).thenReturn(2);
 
-        ParkingTempOrderController controller = new ParkingTempOrderController(service);
+        ParkingTempOrderController controller = new ParkingTempOrderController(service, Mockito.mock(ParkingLotAdminMapper.class), Mockito.mock(ParkingCustomerMapper.class));
         AjaxResult result = controller.remove(new Long[] { 7L, 8L });
 
         assertEquals(200, result.get("code"));
@@ -188,7 +191,7 @@ class ParkingTempOrderControllerTest
         when(service.settleParkingTempOrder(any(ParkingTempOrder.class))).thenReturn(settled);
 
         setLoginUserPermissions("parking:temp:settle");
-        ParkingTempOrderController controller = new ParkingTempOrderController(service);
+        ParkingTempOrderController controller = new ParkingTempOrderController(service, Mockito.mock(ParkingLotAdminMapper.class), Mockito.mock(ParkingCustomerMapper.class));
 
         ParkingTempOrder form = new ParkingTempOrder();
         form.setTempOrderId(30L);
@@ -211,7 +214,7 @@ class ParkingTempOrderControllerTest
         when(service.entryParkingTempOrder(40L)).thenReturn(1);
 
         setLoginUserPermissions("parking:temp:entry");
-        ParkingTempOrderController controller = new ParkingTempOrderController(service);
+        ParkingTempOrderController controller = new ParkingTempOrderController(service, Mockito.mock(ParkingLotAdminMapper.class), Mockito.mock(ParkingCustomerMapper.class));
 
         AjaxResult result = controller.entry(40L);
 
@@ -226,7 +229,7 @@ class ParkingTempOrderControllerTest
         when(service.exitParkingTempOrder(50L)).thenReturn(1);
 
         setLoginUserPermissions("parking:temp:exit");
-        ParkingTempOrderController controller = new ParkingTempOrderController(service);
+        ParkingTempOrderController controller = new ParkingTempOrderController(service, Mockito.mock(ParkingLotAdminMapper.class), Mockito.mock(ParkingCustomerMapper.class));
 
         AjaxResult result = controller.exit(50L);
 
@@ -411,9 +414,23 @@ class ParkingTempOrderControllerTest
         }
 
         @Bean
-        ParkingTempOrderController parkingTempOrderController(IParkingTempOrderService parkingTempOrderService)
+        ParkingLotAdminMapper parkingLotAdminMapper()
         {
-            return new ParkingTempOrderController(parkingTempOrderService);
+            return Mockito.mock(ParkingLotAdminMapper.class);
+        }
+
+        @Bean
+        ParkingCustomerMapper parkingCustomerMapper()
+        {
+            return Mockito.mock(ParkingCustomerMapper.class);
+        }
+
+        @Bean
+        ParkingTempOrderController parkingTempOrderController(IParkingTempOrderService parkingTempOrderService,
+                                                              ParkingLotAdminMapper parkingLotAdminMapper,
+                                                              ParkingCustomerMapper parkingCustomerMapper)
+        {
+            return new ParkingTempOrderController(parkingTempOrderService, parkingLotAdminMapper, parkingCustomerMapper);
         }
     }
 }

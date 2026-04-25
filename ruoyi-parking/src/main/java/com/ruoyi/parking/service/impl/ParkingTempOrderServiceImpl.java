@@ -6,14 +6,17 @@ import com.ruoyi.parking.domain.ParkingCustomer;
 import com.ruoyi.parking.domain.ParkingLot;
 import com.ruoyi.parking.domain.ParkingSpace;
 import com.ruoyi.parking.domain.ParkingTempOrder;
+import com.ruoyi.parking.domain.dto.ParkingSettingsDto;
 import com.ruoyi.parking.mapper.ParkingCustomerMapper;
 import com.ruoyi.parking.mapper.ParkingLotMapper;
 import com.ruoyi.parking.mapper.ParkingSpaceMapper;
 import com.ruoyi.parking.mapper.ParkingTempOrderMapper;
+import com.ruoyi.parking.service.IParkingGlobalRuleService;
 import com.ruoyi.parking.service.IParkingPaymentRecordService;
 import com.ruoyi.parking.service.IParkingTempOrderService;
 import com.ruoyi.parking.util.ParkingMemberDiscountUtils;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -29,18 +32,22 @@ public class ParkingTempOrderServiceImpl implements IParkingTempOrderService
     private final ParkingSpaceMapper parkingSpaceMapper;
     private final ParkingCustomerMapper parkingCustomerMapper;
     private final IParkingPaymentRecordService parkingPaymentRecordService;
+    private final IParkingGlobalRuleService parkingGlobalRuleService;
 
-    public ParkingTempOrderServiceImpl(ParkingTempOrderMapper parkingTempOrderMapper,
+    public ParkingTempOrderServiceImpl(
+        ParkingTempOrderMapper parkingTempOrderMapper,
         ParkingLotMapper parkingLotMapper,
         ParkingSpaceMapper parkingSpaceMapper,
         ParkingCustomerMapper parkingCustomerMapper,
-        IParkingPaymentRecordService parkingPaymentRecordService)
+        IParkingPaymentRecordService parkingPaymentRecordService,
+        IParkingGlobalRuleService parkingGlobalRuleService)
     {
         this.parkingTempOrderMapper = parkingTempOrderMapper;
         this.parkingLotMapper = parkingLotMapper;
         this.parkingSpaceMapper = parkingSpaceMapper;
         this.parkingCustomerMapper = parkingCustomerMapper;
         this.parkingPaymentRecordService = parkingPaymentRecordService;
+        this.parkingGlobalRuleService = parkingGlobalRuleService;
     }
 
     @Override
@@ -59,19 +66,16 @@ public class ParkingTempOrderServiceImpl implements IParkingTempOrderService
     @Transactional(rollbackFor = Exception.class)
     public int insertParkingTempOrder(ParkingTempOrder parkingTempOrder)
     {
-        // Generate order number if not provided
         if (StringUtils.isEmpty(parkingTempOrder.getOrderNo()))
         {
             String timestamp = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
             String suffix = String.format("%04d", new Random().nextInt(10000));
             parkingTempOrder.setOrderNo("TO" + timestamp + suffix);
         }
-        // Default inTime to now
         if (parkingTempOrder.getInTime() == null)
         {
             parkingTempOrder.setInTime(new Date());
         }
-        // Apply status/amount defaults
         parkingTempOrder.setBizStatus("0");
         parkingTempOrder.setPayStatus("0");
         parkingTempOrder.setFeeAmount(BigDecimal.ZERO);
@@ -81,13 +85,12 @@ public class ParkingTempOrderServiceImpl implements IParkingTempOrderService
         {
             parkingTempOrder.setParkingDurationMin(0);
         }
-        // Validate lot exists
+
         ParkingLot lot = parkingLotMapper.selectParkingLotById(parkingTempOrder.getLotId());
         if (lot == null)
         {
             throw new ServiceException("停车场不存在");
         }
-        // Validate space and mark occupied
         if (parkingTempOrder.getSpaceId() != null)
         {
             ParkingSpace space = parkingSpaceMapper.selectParkingSpaceById(parkingTempOrder.getSpaceId());
@@ -148,13 +151,14 @@ public class ParkingTempOrderServiceImpl implements IParkingTempOrderService
         {
             throw new ServiceException("订单状态不允许入场，当前状态：" + current.getBizStatus());
         }
+
         Date now = new Date();
         ParkingTempOrder update = new ParkingTempOrder();
         update.setTempOrderId(current.getTempOrderId());
         update.setInTime(now);
         update.setBizStatus("1");
         parkingTempOrderMapper.updateParkingTempOrder(update);
-        // 标记车位为占用
+
         if (current.getSpaceId() != null)
         {
             ParkingSpace space = parkingSpaceMapper.selectParkingSpaceById(current.getSpaceId());
@@ -185,29 +189,21 @@ public class ParkingTempOrderServiceImpl implements IParkingTempOrderService
         {
             throw new ServiceException("订单状态不允许出场，当前状态：" + current.getBizStatus());
         }
+
+        ParkingSettingsDto.Pricing pricing = parkingGlobalRuleService.getValidatedPricing();
+        ParkingSettingsDto.MemberDiscount memberDiscount = parkingGlobalRuleService.getValidatedMemberDiscount();
+
         Date now = new Date();
         Date inTime = current.getInTime() != null ? current.getInTime() : now;
-        long durationMs = now.getTime() - inTime.getTime();
+        long durationMs = Math.max(now.getTime() - inTime.getTime(), 0L);
         int durationMin = (int) Math.ceil(durationMs / 60000.0);
+        BigDecimal feeAmount = calculateFeeAmount(durationMin, pricing);
 
-        // 按半小时向上取整计费
-        ParkingLot lot = parkingLotMapper.selectParkingLotById(current.getLotId());
-        BigDecimal hourPrice = (lot != null && lot.getTempHourPrice() != null)
-            ? lot.getTempHourPrice()
-            : BigDecimal.ZERO;
-        long halfHours = (long) Math.ceil(durationMin / 30.0);
-        if (halfHours < 1)
-        {
-            halfHours = 1;
-        }
-        BigDecimal feeAmount = hourPrice.multiply(BigDecimal.valueOf(halfHours)).divide(BigDecimal.valueOf(2));
-
-        // 应用会员折扣
         BigDecimal discountAmount = BigDecimal.ZERO;
         if (current.getCustomerId() != null)
         {
             ParkingCustomer customer = parkingCustomerMapper.selectParkingCustomerById(current.getCustomerId());
-            discountAmount = ParkingMemberDiscountUtils.calculateDiscount(feeAmount, customer);
+            discountAmount = ParkingMemberDiscountUtils.calculateDiscount(feeAmount, customer, memberDiscount);
         }
         BigDecimal payAmount = feeAmount.subtract(discountAmount).max(BigDecimal.ZERO);
 
@@ -221,21 +217,6 @@ public class ParkingTempOrderServiceImpl implements IParkingTempOrderService
         update.setBizStatus("2");
         parkingTempOrderMapper.updateParkingTempOrder(update);
 
-        // 释放车位
-        if (current.getSpaceId() != null)
-        {
-            ParkingSpace space = parkingSpaceMapper.selectParkingSpaceById(current.getSpaceId());
-            if (space != null)
-            {
-                ParkingSpace spaceUpdate = new ParkingSpace();
-                spaceUpdate.setSpaceId(space.getSpaceId());
-                spaceUpdate.setLotId(space.getLotId());
-                spaceUpdate.setSpaceCode(space.getSpaceCode());
-                spaceUpdate.setSpaceType(space.getSpaceType());
-                spaceUpdate.setStatus("0");
-                parkingSpaceMapper.updateParkingSpace(spaceUpdate);
-            }
-        }
         return 1;
     }
 
@@ -256,7 +237,7 @@ public class ParkingTempOrderServiceImpl implements IParkingTempOrderService
         {
             throw new ServiceException("订单尚未出场，无法结算，当前状态：" + current.getBizStatus());
         }
-        // 支付确认：biz_status=2 → 3，pay_status='1'
+
         Date now = new Date();
         ParkingTempOrder update = new ParkingTempOrder();
         update.setTempOrderId(current.getTempOrderId());
@@ -281,6 +262,21 @@ public class ParkingTempOrderServiceImpl implements IParkingTempOrderService
             );
         }
 
+        if (current.getSpaceId() != null)
+        {
+            ParkingSpace space = parkingSpaceMapper.selectParkingSpaceById(current.getSpaceId());
+            if (space != null)
+            {
+                ParkingSpace spaceUpdate = new ParkingSpace();
+                spaceUpdate.setSpaceId(space.getSpaceId());
+                spaceUpdate.setLotId(space.getLotId());
+                spaceUpdate.setSpaceCode(space.getSpaceCode());
+                spaceUpdate.setSpaceType(space.getSpaceType());
+                spaceUpdate.setStatus("0");
+                parkingSpaceMapper.updateParkingSpace(spaceUpdate);
+            }
+        }
+
         return parkingTempOrderMapper.selectParkingTempOrderById(current.getTempOrderId());
     }
 
@@ -290,10 +286,9 @@ public class ParkingTempOrderServiceImpl implements IParkingTempOrderService
     {
         List<ParkingTempOrder> orders = parkingTempOrderMapper.selectParkingTempOrderByIds(tempOrderIds);
         int rows = parkingTempOrderMapper.deleteParkingTempOrderByIds(tempOrderIds);
-        // 释放停放中（1）或待入场（0）订单占用的车位
         for (ParkingTempOrder order : orders)
         {
-            if (("0".equals(order.getBizStatus()) || "1".equals(order.getBizStatus())) && order.getSpaceId() != null)
+            if (("0".equals(order.getBizStatus()) || "1".equals(order.getBizStatus()) || "2".equals(order.getBizStatus())) && order.getSpaceId() != null)
             {
                 ParkingSpace space = parkingSpaceMapper.selectParkingSpaceById(order.getSpaceId());
                 if (space != null)
@@ -309,5 +304,38 @@ public class ParkingTempOrderServiceImpl implements IParkingTempOrderService
             }
         }
         return rows;
+    }
+
+    private BigDecimal calculateFeeAmount(int durationMin, ParkingSettingsDto.Pricing pricing)
+    {
+        int chargeableMinutes = Math.max(durationMin - pricing.getTempFreeMinutes(), 0);
+        if (chargeableMinutes == 0)
+        {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal feeAmount;
+        if (Boolean.TRUE.equals(pricing.getTempRoundUpEnabled()))
+        {
+            long steps = (chargeableMinutes + pricing.getTempBillingStepMinutes() - 1L)
+                / pricing.getTempBillingStepMinutes();
+            feeAmount = pricing.getTempHourPrice()
+                .multiply(BigDecimal.valueOf(pricing.getTempBillingStepMinutes()))
+                .multiply(BigDecimal.valueOf(steps))
+                .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+        }
+        else
+        {
+            feeAmount = pricing.getTempHourPrice()
+                .multiply(BigDecimal.valueOf(chargeableMinutes))
+                .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+        }
+
+        BigDecimal capAmount = pricing.getTempDailyCapAmount();
+        if (capAmount != null && capAmount.compareTo(BigDecimal.ZERO) > 0 && feeAmount.compareTo(capAmount) > 0)
+        {
+            return capAmount;
+        }
+        return feeAmount;
     }
 }

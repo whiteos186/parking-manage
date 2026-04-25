@@ -6,6 +6,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 
     <resultMap type="ParkingCustomer" id="ParkingCustomerResult">
         <id property="customerId" column="customer_id"/>
+        <result property="userId" column="user_id"/>
         <result property="customerCode" column="customer_code"/>
         <result property="customerName" column="customer_name"/>
         <result property="mobile" column="mobile"/>
@@ -25,6 +26,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <sql id="selectParkingCustomerColumns">
         select
             customer_id,
+            user_id,
             customer_code,
             customer_name,
             mobile,
@@ -58,6 +60,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <select id="selectParkingCustomerList" parameterType="ParkingCustomer" resultMap="ParkingCustomerResult">
         <include refid="selectParkingCustomerColumns"/>
         where del_flag = '0'
+        <if test="customerId != null">
+            and customer_id = #{customerId}
+        </if>
+        <if test="userId != null">
+            and user_id = #{userId}
+        </if>
         <if test="customerCode != null and customerCode != ''">
             and customer_code like concat('%', #{customerCode}, '%')
         </if>
@@ -84,8 +92,16 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         order by customer_id desc
     </select>
 
+    <select id="selectParkingCustomerByUserId" resultMap="ParkingCustomerResult">
+        <include refid="selectParkingCustomerColumns"/>
+        where user_id = #{userId}
+          and del_flag = '0'
+        limit 1
+    </select>
+
     <insert id="insertParkingCustomer" parameterType="ParkingCustomer" useGeneratedKeys="true" keyProperty="customerId">
         insert into parking_customer (
+            user_id,
             customer_code,
             customer_name,
             mobile,
@@ -99,6 +115,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             create_time,
             remark
         ) values (
+            #{userId},
             #{customerCode},
             #{customerName},
             #{mobile},
@@ -117,6 +134,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <update id="updateParkingCustomer" parameterType="ParkingCustomer">
         update parking_customer
         <set>
+            <if test="userId != null">user_id = #{userId},</if>
             <if test="customerCode != null and customerCode != ''">customer_code = #{customerCode},</if>
             <if test="customerName != null and customerName != ''">customer_name = #{customerName},</if>
             <if test="mobile != null and mobile != ''">mobile = #{mobile},</if>

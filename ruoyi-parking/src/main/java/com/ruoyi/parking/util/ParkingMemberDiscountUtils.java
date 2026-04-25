@@ -1,19 +1,22 @@
 package com.ruoyi.parking.util;
 
+import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.parking.domain.ParkingCustomer;
+import com.ruoyi.parking.domain.dto.ParkingSettingsDto;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Date;
 
 public class ParkingMemberDiscountUtils
 {
-    private ParkingMemberDiscountUtils() {}
+    private ParkingMemberDiscountUtils()
+    {
+    }
 
-    /**
-     * 计算会员折扣金额。客户必须是有效会员且未到期，否则返回 ZERO。
-     * 银卡 0.95、金卡 0.90、铂金 0.85
-     */
-    public static BigDecimal calculateDiscount(BigDecimal originalAmount, ParkingCustomer customer)
+    public static BigDecimal calculateDiscount(
+        BigDecimal originalAmount,
+        ParkingCustomer customer,
+        ParkingSettingsDto.MemberDiscount memberDiscount)
     {
         if (originalAmount == null || originalAmount.compareTo(BigDecimal.ZERO) <= 0)
         {
@@ -28,29 +31,44 @@ public class ParkingMemberDiscountUtils
         {
             return BigDecimal.ZERO;
         }
-        BigDecimal rate = resolveDiscountRate(customer.getMemberType());
-        if (rate == null)
+        if (memberDiscount == null || !Boolean.TRUE.equals(memberDiscount.getMemberDiscountEnabled()))
         {
             return BigDecimal.ZERO;
         }
-        return originalAmount.multiply(rate).setScale(2, RoundingMode.HALF_UP);
+
+        BigDecimal discountRate = resolveDiscountRate(customer.getMemberType(), memberDiscount);
+        if (discountRate == null)
+        {
+            return BigDecimal.ZERO;
+        }
+        return originalAmount.multiply(discountRate).setScale(2, RoundingMode.HALF_UP);
     }
 
-    /** 返回折扣额外比例（即原价 × rate = 优惠金额），非折后价比例 */
-    private static BigDecimal resolveDiscountRate(String memberType)
+    private static BigDecimal resolveDiscountRate(
+        String memberType,
+        ParkingSettingsDto.MemberDiscount memberDiscount)
     {
         if ("1".equals(memberType))
         {
-            return new BigDecimal("0.05"); // 银卡 95折，优惠5%
+            return requireRate(memberDiscount.getSilverRate(), "parking.rule.memberDiscount.silver");
         }
         if ("2".equals(memberType))
         {
-            return new BigDecimal("0.10"); // 金卡 90折，优惠10%
+            return requireRate(memberDiscount.getGoldRate(), "parking.rule.memberDiscount.gold");
         }
         if ("3".equals(memberType))
         {
-            return new BigDecimal("0.15"); // 铂金 85折，优惠15%
+            return requireRate(memberDiscount.getPlatinumRate(), "parking.rule.memberDiscount.platinum");
         }
         return null;
+    }
+
+    private static BigDecimal requireRate(BigDecimal rate, String configKey)
+    {
+        if (rate == null)
+        {
+            throw new ServiceException("缺少停车场全局配置: " + configKey);
+        }
+        return rate;
     }
 }

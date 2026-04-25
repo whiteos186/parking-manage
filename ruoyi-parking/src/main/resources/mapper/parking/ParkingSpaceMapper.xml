@@ -158,4 +158,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
           and status = '0'
     </select>
 
+    <select id="countOccupiedParkingSpaceByLotId" resultType="int">
+        select count(1)
+        from parking_space
+        where del_flag = '0'
+          and lot_id = #{lotId}
+          and status &lt;&gt; '0'
+    </select>
+
 </mapper>

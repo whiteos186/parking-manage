@@ -10,6 +10,9 @@ public class ParkingCustomer extends BaseEntity
 
     private Long customerId;
 
+    /** 关联的系统用户ID (FK -> sys_user.user_id) */
+    private Long userId;
+
     @NotBlank(message = "客户编号不能为空")
     private String customerCode;
 
@@ -42,6 +45,16 @@ public class ParkingCustomer extends BaseEntity
     public void setCustomerId(Long customerId)
     {
         this.customerId = customerId;
+    }
+
+    public Long getUserId()
+    {
+        return userId;
+    }
+
+    public void setUserId(Long userId)
+    {
+        this.userId = userId;
     }
 
     public String getCustomerCode()

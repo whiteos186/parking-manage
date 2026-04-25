@@ -18,6 +18,7 @@ import com.ruoyi.common.core.domain.model.LoginUser;
 import com.ruoyi.framework.web.service.PermissionService;
 import com.ruoyi.parking.controller.ParkingUserVehicleController;
 import com.ruoyi.parking.domain.ParkingUserVehicle;
+import com.ruoyi.parking.mapper.ParkingCustomerMapper;
 import com.ruoyi.parking.service.IParkingUserVehicleService;
 import java.util.Arrays;
 import java.util.Collections;
@@ -80,7 +81,8 @@ class ParkingUserVehicleControllerTest
         vehicle.setStatus("0");
         when(service.selectParkingUserVehicleList(any(ParkingUserVehicle.class))).thenReturn(List.of(vehicle));
 
-        ParkingUserVehicleController controller = new ParkingUserVehicleController(service);
+        setLoginUserPermissions("parking:vehicle:list");
+        ParkingUserVehicleController controller = new ParkingUserVehicleController(service, Mockito.mock(ParkingCustomerMapper.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         mockMvc.perform(get("/parking/vehicle/list")
@@ -108,7 +110,7 @@ class ParkingUserVehicleControllerTest
         vehicle.setPlateNo("京B99999");
         when(service.selectParkingUserVehicleById(6L)).thenReturn(vehicle);
 
-        ParkingUserVehicleController controller = new ParkingUserVehicleController(service);
+        ParkingUserVehicleController controller = new ParkingUserVehicleController(service, Mockito.mock(ParkingCustomerMapper.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         mockMvc.perform(get("/parking/vehicle/6"))
@@ -131,7 +133,7 @@ class ParkingUserVehicleControllerTest
         vehicle.setStatus("0");
         when(service.selectParkingUserVehicleOptions(100L)).thenReturn(List.of(vehicle));
 
-        ParkingUserVehicleController controller = new ParkingUserVehicleController(service);
+        ParkingUserVehicleController controller = new ParkingUserVehicleController(service, Mockito.mock(ParkingCustomerMapper.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         mockMvc.perform(get("/parking/vehicle/options").param("customerId", "100"))
@@ -152,7 +154,7 @@ class ParkingUserVehicleControllerTest
         when(service.insertParkingUserVehicle(any(ParkingUserVehicle.class))).thenReturn(1);
 
         setLoginUserPermissions("parking:vehicle:add");
-        ParkingUserVehicleController controller = new ParkingUserVehicleController(service);
+        ParkingUserVehicleController controller = new ParkingUserVehicleController(service, Mockito.mock(ParkingCustomerMapper.class));
 
         ParkingUserVehicle form = new ParkingUserVehicle();
         ParkingTestBeanProperties.setLongProperty(form, "customerId", 100L);
@@ -174,7 +176,7 @@ class ParkingUserVehicleControllerTest
         when(service.updateParkingUserVehicle(any(ParkingUserVehicle.class))).thenReturn(1);
 
         setLoginUserPermissions("parking:vehicle:edit");
-        ParkingUserVehicleController controller = new ParkingUserVehicleController(service);
+        ParkingUserVehicleController controller = new ParkingUserVehicleController(service, Mockito.mock(ParkingCustomerMapper.class));
 
         ParkingUserVehicle form = new ParkingUserVehicle();
         form.setVehicleId(100L);
@@ -196,7 +198,7 @@ class ParkingUserVehicleControllerTest
         IParkingUserVehicleService service = Mockito.mock(IParkingUserVehicleService.class);
         when(service.deleteParkingUserVehicleByIds(new Long[] { 3L, 4L })).thenReturn(2);
 
-        ParkingUserVehicleController controller = new ParkingUserVehicleController(service);
+        ParkingUserVehicleController controller = new ParkingUserVehicleController(service, Mockito.mock(ParkingCustomerMapper.class));
         AjaxResult result = controller.remove(new Long[] { 3L, 4L });
 
         assertEquals(200, result.get("code"));
@@ -210,7 +212,7 @@ class ParkingUserVehicleControllerTest
         doNothing().when(service).setDefaultVehicle(55L);
 
         setLoginUserPermissions("parking:vehicle:setDefault");
-        ParkingUserVehicleController controller = new ParkingUserVehicleController(service);
+        ParkingUserVehicleController controller = new ParkingUserVehicleController(service, Mockito.mock(ParkingCustomerMapper.class));
 
         AjaxResult result = controller.setDefault(55L);
 
@@ -383,9 +385,16 @@ class ParkingUserVehicleControllerTest
         }
 
         @Bean
-        ParkingUserVehicleController parkingUserVehicleController(IParkingUserVehicleService parkingUserVehicleService)
+        ParkingCustomerMapper parkingCustomerMapper()
         {
-            return new ParkingUserVehicleController(parkingUserVehicleService);
+            return Mockito.mock(ParkingCustomerMapper.class);
+        }
+
+        @Bean
+        ParkingUserVehicleController parkingUserVehicleController(IParkingUserVehicleService parkingUserVehicleService,
+                                                                   ParkingCustomerMapper parkingCustomerMapper)
+        {
+            return new ParkingUserVehicleController(parkingUserVehicleService, parkingCustomerMapper);
         }
     }
 }
