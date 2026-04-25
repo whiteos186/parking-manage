@@ -30,6 +30,8 @@ public class ParkingGlobalRuleServiceImpl implements IParkingGlobalRuleService
     static final String PAYMENT_CASH_ENABLED_KEY = "parking.rule.payment.cashEnabled";
     static final String ORDER_CANCEL_AUTO_REFUND_ENABLED_KEY = "parking.rule.order.cancelAutoRefundEnabled";
     static final String PAYMENT_CHANNEL_DICT_TYPE = "parking_payment_channel";
+    private static final String CONFIG_MISSING_MESSAGE = "停车场全局配置缺失: ";
+    private static final String CONFIG_INVALID_MESSAGE = "停车场全局配置不合法: ";
 
     private final ISysConfigService sysConfigService;
 
@@ -56,23 +58,41 @@ public class ParkingGlobalRuleServiceImpl implements IParkingGlobalRuleService
     public ParkingSettingsDto.Pricing getValidatedPricing()
     {
         ParkingSettingsDto.Pricing pricing = loadPricing();
-        requireConfig(pricing.getMonthlyPrice(), MONTHLY_PRICE_KEY);
-        requireConfig(pricing.getTempHourPrice(), TEMP_HOUR_PRICE_KEY);
-        requireConfig(pricing.getTempFreeMinutes(), TEMP_FREE_MINUTES_KEY);
-        requireConfig(pricing.getTempBillingStepMinutes(), TEMP_BILLING_STEP_MINUTES_KEY);
-        requireConfig(pricing.getTempRoundUpEnabled(), TEMP_ROUND_UP_ENABLED_KEY);
-        requireConfig(pricing.getTempDailyCapAmount(), TEMP_DAILY_CAP_AMOUNT_KEY);
+        if (pricing.getMonthlyPrice() == null)
+        {
+            throw new ServiceException(CONFIG_MISSING_MESSAGE + MONTHLY_PRICE_KEY);
+        }
+        if (pricing.getTempHourPrice() == null)
+        {
+            throw new ServiceException(CONFIG_MISSING_MESSAGE + TEMP_HOUR_PRICE_KEY);
+        }
+        if (pricing.getTempFreeMinutes() == null)
+        {
+            throw new ServiceException(CONFIG_MISSING_MESSAGE + TEMP_FREE_MINUTES_KEY);
+        }
+        if (pricing.getTempBillingStepMinutes() == null)
+        {
+            throw new ServiceException(CONFIG_MISSING_MESSAGE + TEMP_BILLING_STEP_MINUTES_KEY);
+        }
+        if (pricing.getTempRoundUpEnabled() == null)
+        {
+            throw new ServiceException(CONFIG_MISSING_MESSAGE + TEMP_ROUND_UP_ENABLED_KEY);
+        }
+        if (pricing.getTempDailyCapAmount() == null)
+        {
+            throw new ServiceException(CONFIG_MISSING_MESSAGE + TEMP_DAILY_CAP_AMOUNT_KEY);
+        }
 
         validateNonNegative(pricing.getMonthlyPrice(), MONTHLY_PRICE_KEY);
         validateNonNegative(pricing.getTempHourPrice(), TEMP_HOUR_PRICE_KEY);
         validateNonNegative(pricing.getTempDailyCapAmount(), TEMP_DAILY_CAP_AMOUNT_KEY);
         if (pricing.getTempFreeMinutes() < 0)
         {
-            throw invalidConfig(TEMP_FREE_MINUTES_KEY);
+            throw new ServiceException(CONFIG_INVALID_MESSAGE + TEMP_FREE_MINUTES_KEY);
         }
         if (pricing.getTempBillingStepMinutes() <= 0)
         {
-            throw invalidConfig(TEMP_BILLING_STEP_MINUTES_KEY);
+            throw new ServiceException(CONFIG_INVALID_MESSAGE + TEMP_BILLING_STEP_MINUTES_KEY);
         }
         return pricing;
     }
@@ -81,12 +101,24 @@ public class ParkingGlobalRuleServiceImpl implements IParkingGlobalRuleService
     public ParkingSettingsDto.MemberDiscount getValidatedMemberDiscount()
     {
         ParkingSettingsDto.MemberDiscount memberDiscount = loadMemberDiscount();
-        requireConfig(memberDiscount.getMemberDiscountEnabled(), MEMBER_DISCOUNT_ENABLED_KEY);
+        if (memberDiscount.getMemberDiscountEnabled() == null)
+        {
+            throw new ServiceException(CONFIG_MISSING_MESSAGE + MEMBER_DISCOUNT_ENABLED_KEY);
+        }
         if (Boolean.TRUE.equals(memberDiscount.getMemberDiscountEnabled()))
         {
-            requireConfig(memberDiscount.getSilverRate(), MEMBER_DISCOUNT_SILVER_KEY);
-            requireConfig(memberDiscount.getGoldRate(), MEMBER_DISCOUNT_GOLD_KEY);
-            requireConfig(memberDiscount.getPlatinumRate(), MEMBER_DISCOUNT_PLATINUM_KEY);
+            if (memberDiscount.getSilverRate() == null)
+            {
+                throw new ServiceException(CONFIG_MISSING_MESSAGE + MEMBER_DISCOUNT_SILVER_KEY);
+            }
+            if (memberDiscount.getGoldRate() == null)
+            {
+                throw new ServiceException(CONFIG_MISSING_MESSAGE + MEMBER_DISCOUNT_GOLD_KEY);
+            }
+            if (memberDiscount.getPlatinumRate() == null)
+            {
+                throw new ServiceException(CONFIG_MISSING_MESSAGE + MEMBER_DISCOUNT_PLATINUM_KEY);
+            }
             validateDiscountRate(memberDiscount.getSilverRate(), MEMBER_DISCOUNT_SILVER_KEY);
             validateDiscountRate(memberDiscount.getGoldRate(), MEMBER_DISCOUNT_GOLD_KEY);
             validateDiscountRate(memberDiscount.getPlatinumRate(), MEMBER_DISCOUNT_PLATINUM_KEY);
@@ -98,8 +130,14 @@ public class ParkingGlobalRuleServiceImpl implements IParkingGlobalRuleService
     public ParkingSettingsDto.Payment getValidatedPayment()
     {
         ParkingSettingsDto.Payment payment = loadPayment();
-        requireConfig(payment.getDefaultChannel(), PAYMENT_DEFAULT_CHANNEL_KEY);
-        requireConfig(payment.getCashEnabled(), PAYMENT_CASH_ENABLED_KEY);
+        if (payment.getDefaultChannel() == null)
+        {
+            throw new ServiceException(CONFIG_MISSING_MESSAGE + PAYMENT_DEFAULT_CHANNEL_KEY);
+        }
+        if (payment.getCashEnabled() == null)
+        {
+            throw new ServiceException(CONFIG_MISSING_MESSAGE + PAYMENT_CASH_ENABLED_KEY);
+        }
         validateDefaultPaymentChannel(payment.getDefaultChannel());
         return payment;
     }
@@ -108,7 +146,10 @@ public class ParkingGlobalRuleServiceImpl implements IParkingGlobalRuleService
     public ParkingSettingsDto.Switches getValidatedSwitches()
     {
         ParkingSettingsDto.Switches switches = loadSwitches();
-        requireConfig(switches.getCancelAutoRefundEnabled(), ORDER_CANCEL_AUTO_REFUND_ENABLED_KEY);
+        if (switches.getCancelAutoRefundEnabled() == null)
+        {
+            throw new ServiceException(CONFIG_MISSING_MESSAGE + ORDER_CANCEL_AUTO_REFUND_ENABLED_KEY);
+        }
         return switches;
     }
 
@@ -176,19 +217,58 @@ public class ParkingGlobalRuleServiceImpl implements IParkingGlobalRuleService
         {
             throw new ServiceException("停车场全局配置参数不能为空");
         }
-        requireUpdateField(updateDto.getMonthlyPrice(), "月租价不能为空");
-        requireUpdateField(updateDto.getTempHourPrice(), "临停小时费率不能为空");
-        requireUpdateField(updateDto.getTempFreeMinutes(), "临停免费分钟数不能为空");
-        requireUpdateField(updateDto.getTempBillingStepMinutes(), "临停计费步长不能为空");
-        requireUpdateField(updateDto.getTempRoundUpEnabled(), "临停向上取整开关不能为空");
-        requireUpdateField(updateDto.getTempDailyCapAmount(), "临停每日封顶金额不能为空");
-        requireUpdateField(updateDto.getMemberDiscountEnabled(), "会员折扣开关不能为空");
-        requireUpdateField(updateDto.getSilverDiscountRate(), "银卡折扣率不能为空");
-        requireUpdateField(updateDto.getGoldDiscountRate(), "金卡折扣率不能为空");
-        requireUpdateField(updateDto.getPlatinumDiscountRate(), "铂金折扣率不能为空");
-        requireUpdateField(updateDto.getDefaultPaymentChannel(), "默认支付渠道不能为空");
-        requireUpdateField(updateDto.getCashEnabled(), "现金支付开关不能为空");
-        requireUpdateField(updateDto.getCancelAutoRefundEnabled(), "取消订单自动退款开关不能为空");
+        if (updateDto.getMonthlyPrice() == null)
+        {
+            throw new ServiceException("月租价不能为空");
+        }
+        if (updateDto.getTempHourPrice() == null)
+        {
+            throw new ServiceException("临停小时费率不能为空");
+        }
+        if (updateDto.getTempFreeMinutes() == null)
+        {
+            throw new ServiceException("临停免费分钟数不能为空");
+        }
+        if (updateDto.getTempBillingStepMinutes() == null)
+        {
+            throw new ServiceException("临停计费步长不能为空");
+        }
+        if (updateDto.getTempRoundUpEnabled() == null)
+        {
+            throw new ServiceException("临停向上取整开关不能为空");
+        }
+        if (updateDto.getTempDailyCapAmount() == null)
+        {
+            throw new ServiceException("临停每日封顶金额不能为空");
+        }
+        if (updateDto.getMemberDiscountEnabled() == null)
+        {
+            throw new ServiceException("会员折扣开关不能为空");
+        }
+        if (updateDto.getSilverDiscountRate() == null)
+        {
+            throw new ServiceException("银卡折扣率不能为空");
+        }
+        if (updateDto.getGoldDiscountRate() == null)
+        {
+            throw new ServiceException("金卡折扣率不能为空");
+        }
+        if (updateDto.getPlatinumDiscountRate() == null)
+        {
+            throw new ServiceException("铂金折扣率不能为空");
+        }
+        if (updateDto.getDefaultPaymentChannel() == null)
+        {
+            throw new ServiceException("默认支付渠道不能为空");
+        }
+        if (updateDto.getCashEnabled() == null)
+        {
+            throw new ServiceException("现金支付开关不能为空");
+        }
+        if (updateDto.getCancelAutoRefundEnabled() == null)
+        {
+            throw new ServiceException("取消订单自动退款开关不能为空");
+        }
 
         validateNonNegative(updateDto.getMonthlyPrice(), MONTHLY_PRICE_KEY);
         validateNonNegative(updateDto.getTempHourPrice(), TEMP_HOUR_PRICE_KEY);
@@ -199,11 +279,11 @@ public class ParkingGlobalRuleServiceImpl implements IParkingGlobalRuleService
 
         if (updateDto.getTempFreeMinutes() < 0)
         {
-            throw invalidConfig(TEMP_FREE_MINUTES_KEY);
+            throw new ServiceException(CONFIG_INVALID_MESSAGE + TEMP_FREE_MINUTES_KEY);
         }
         if (updateDto.getTempBillingStepMinutes() <= 0)
         {
-            throw invalidConfig(TEMP_BILLING_STEP_MINUTES_KEY);
+            throw new ServiceException(CONFIG_INVALID_MESSAGE + TEMP_BILLING_STEP_MINUTES_KEY);
         }
         if (StringUtils.isBlank(updateDto.getDefaultPaymentChannel()))
         {
@@ -226,7 +306,7 @@ public class ParkingGlobalRuleServiceImpl implements IParkingGlobalRuleService
     {
         if (amount.compareTo(BigDecimal.ZERO) < 0)
         {
-            throw invalidConfig(configKey);
+            throw new ServiceException(CONFIG_INVALID_MESSAGE + configKey);
         }
     }
 
@@ -234,23 +314,7 @@ public class ParkingGlobalRuleServiceImpl implements IParkingGlobalRuleService
     {
         if (discountRate.compareTo(BigDecimal.ZERO) < 0 || discountRate.compareTo(BigDecimal.ONE) > 0)
         {
-            throw invalidConfig(configKey);
-        }
-    }
-
-    private void requireUpdateField(Object value, String message)
-    {
-        if (value == null)
-        {
-            throw new ServiceException(message);
-        }
-    }
-
-    private void requireConfig(Object value, String configKey)
-    {
-        if (value == null)
-        {
-            throw missingConfig(configKey);
+            throw new ServiceException(CONFIG_INVALID_MESSAGE + configKey);
         }
     }
 
@@ -261,7 +325,11 @@ public class ParkingGlobalRuleServiceImpl implements IParkingGlobalRuleService
         List<SysConfig> configs = sysConfigService.selectConfigList(query);
         if (configs.isEmpty())
         {
-            SysConfig config = buildConfig(name, key, value);
+            SysConfig config = new SysConfig();
+            config.setConfigName(name);
+            config.setConfigKey(key);
+            config.setConfigValue(value);
+            config.setConfigType("N");
             config.setCreateBy(operator);
             sysConfigService.insertConfig(config);
             return;
@@ -273,16 +341,6 @@ public class ParkingGlobalRuleServiceImpl implements IParkingGlobalRuleService
         config.setConfigType("N");
         config.setUpdateBy(operator);
         sysConfigService.updateConfig(config);
-    }
-
-    private SysConfig buildConfig(String name, String key, String value)
-    {
-        SysConfig config = new SysConfig();
-        config.setConfigName(name);
-        config.setConfigKey(key);
-        config.setConfigValue(value);
-        config.setConfigType("N");
-        return config;
     }
 
     private String readString(String configKey)
@@ -304,7 +362,7 @@ public class ParkingGlobalRuleServiceImpl implements IParkingGlobalRuleService
         }
         catch (NumberFormatException ex)
         {
-            throw invalidConfig(configKey);
+            throw new ServiceException(CONFIG_INVALID_MESSAGE + configKey);
         }
     }
 
@@ -321,7 +379,7 @@ public class ParkingGlobalRuleServiceImpl implements IParkingGlobalRuleService
         }
         catch (NumberFormatException ex)
         {
-            throw invalidConfig(configKey);
+            throw new ServiceException(CONFIG_INVALID_MESSAGE + configKey);
         }
     }
 
@@ -340,16 +398,6 @@ public class ParkingGlobalRuleServiceImpl implements IParkingGlobalRuleService
         {
             return Boolean.FALSE;
         }
-        throw invalidConfig(configKey);
-    }
-
-    private ServiceException missingConfig(String configKey)
-    {
-        return new ServiceException("停车场全局配置缺失: " + configKey);
-    }
-
-    private ServiceException invalidConfig(String configKey)
-    {
-        return new ServiceException("停车场全局配置不合法: " + configKey);
+        throw new ServiceException(CONFIG_INVALID_MESSAGE + configKey);
     }
 }

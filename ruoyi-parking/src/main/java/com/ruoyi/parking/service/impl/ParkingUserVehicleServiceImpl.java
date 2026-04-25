@@ -43,7 +43,30 @@ public class ParkingUserVehicleServiceImpl implements IParkingUserVehicleService
     @Transactional(rollbackFor = Exception.class)
     public int insertParkingUserVehicle(ParkingUserVehicle parkingUserVehicle)
     {
-        applyInsertDefaults(parkingUserVehicle);
+        if (parkingUserVehicle.getCustomerId() == null)
+        {
+            throw new ServiceException("Customer is required");
+        }
+        if (StringUtils.isEmpty(parkingUserVehicle.getPlateNo()))
+        {
+            throw new ServiceException("Plate number is required");
+        }
+        if (StringUtils.isEmpty(parkingUserVehicle.getVehicleType()))
+        {
+            parkingUserVehicle.setVehicleType("1");
+        }
+        if (StringUtils.isEmpty(parkingUserVehicle.getStatus()))
+        {
+            parkingUserVehicle.setStatus("0");
+        }
+        if (StringUtils.isEmpty(parkingUserVehicle.getIsDefault()))
+        {
+            parkingUserVehicle.setIsDefault("0");
+        }
+        if (parkingUserVehicle.getBindTime() == null)
+        {
+            parkingUserVehicle.setBindTime(new Date());
+        }
         validateUniquePlateNo(parkingUserVehicle);
         if ("1".equals(parkingUserVehicle.getIsDefault()))
         {
@@ -61,7 +84,26 @@ public class ParkingUserVehicleServiceImpl implements IParkingUserVehicleService
         {
             throw new ServiceException("车辆不存在");
         }
-        mergeUpdateDefaults(parkingUserVehicle, current);
+        if (StringUtils.isEmpty(parkingUserVehicle.getPlateNo()))
+        {
+            parkingUserVehicle.setPlateNo(current.getPlateNo());
+        }
+        if (StringUtils.isEmpty(parkingUserVehicle.getVehicleType()))
+        {
+            parkingUserVehicle.setVehicleType(current.getVehicleType());
+        }
+        if (StringUtils.isEmpty(parkingUserVehicle.getStatus()))
+        {
+            parkingUserVehicle.setStatus(current.getStatus());
+        }
+        if (StringUtils.isEmpty(parkingUserVehicle.getIsDefault()))
+        {
+            parkingUserVehicle.setIsDefault(current.getIsDefault());
+        }
+        if (parkingUserVehicle.getCustomerId() == null)
+        {
+            parkingUserVehicle.setCustomerId(current.getCustomerId());
+        }
         if (!Objects.equals(parkingUserVehicle.getPlateNo(), current.getPlateNo()))
         {
             validateUniquePlateNo(parkingUserVehicle);
@@ -95,58 +137,6 @@ public class ParkingUserVehicleServiceImpl implements IParkingUserVehicleService
         parkingUserVehicleMapper.clearDefaultByCustomerId(vehicle.getCustomerId());
         vehicle.setIsDefault("1");
         parkingUserVehicleMapper.updateParkingUserVehicle(vehicle);
-    }
-
-    private void applyInsertDefaults(ParkingUserVehicle parkingUserVehicle)
-    {
-        if (parkingUserVehicle.getCustomerId() == null)
-        {
-            throw new ServiceException("Customer is required");
-        }
-        if (StringUtils.isEmpty(parkingUserVehicle.getPlateNo()))
-        {
-            throw new ServiceException("Plate number is required");
-        }
-        if (StringUtils.isEmpty(parkingUserVehicle.getVehicleType()))
-        {
-            parkingUserVehicle.setVehicleType("1");
-        }
-        if (StringUtils.isEmpty(parkingUserVehicle.getStatus()))
-        {
-            parkingUserVehicle.setStatus("0");
-        }
-        if (StringUtils.isEmpty(parkingUserVehicle.getIsDefault()))
-        {
-            parkingUserVehicle.setIsDefault("0");
-        }
-        if (parkingUserVehicle.getBindTime() == null)
-        {
-            parkingUserVehicle.setBindTime(new Date());
-        }
-    }
-
-    private void mergeUpdateDefaults(ParkingUserVehicle parkingUserVehicle, ParkingUserVehicle current)
-    {
-        if (StringUtils.isEmpty(parkingUserVehicle.getPlateNo()))
-        {
-            parkingUserVehicle.setPlateNo(current.getPlateNo());
-        }
-        if (StringUtils.isEmpty(parkingUserVehicle.getVehicleType()))
-        {
-            parkingUserVehicle.setVehicleType(current.getVehicleType());
-        }
-        if (StringUtils.isEmpty(parkingUserVehicle.getStatus()))
-        {
-            parkingUserVehicle.setStatus(current.getStatus());
-        }
-        if (StringUtils.isEmpty(parkingUserVehicle.getIsDefault()))
-        {
-            parkingUserVehicle.setIsDefault(current.getIsDefault());
-        }
-        if (parkingUserVehicle.getCustomerId() == null)
-        {
-            parkingUserVehicle.setCustomerId(current.getCustomerId());
-        }
     }
 
     private void validateUniquePlateNo(ParkingUserVehicle parkingUserVehicle)
