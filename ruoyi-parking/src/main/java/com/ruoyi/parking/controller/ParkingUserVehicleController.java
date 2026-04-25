@@ -128,7 +128,7 @@ public class ParkingUserVehicleController extends BaseController
         Long customerId = ParkingAuthUtils.resolveRequiredCustomerId(parkingCustomerMapper);
         if (!customerId.equals(vehicle.getCustomerId()))
         {
-            throw new com.ruoyi.common.exception.ServiceException("Vehicle does not belong to current customer");
+            throw new com.ruoyi.common.exception.ServiceException("车辆不属于当前客户");
         }
     }
 }

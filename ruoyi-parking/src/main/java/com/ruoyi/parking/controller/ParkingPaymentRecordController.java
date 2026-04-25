@@ -115,7 +115,7 @@ public class ParkingPaymentRecordController extends BaseController
         Long customerId = ParkingAuthUtils.resolveRequiredCustomerId(parkingCustomerMapper);
         if (!customerId.equals(record.getCustomerId()))
         {
-            throw new com.ruoyi.common.exception.ServiceException("Payment record does not belong to current customer");
+            throw new com.ruoyi.common.exception.ServiceException("支付流水不属于当前客户");
         }
     }
 }

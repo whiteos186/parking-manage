@@ -133,7 +133,7 @@ public class ParkingMonthlyOrderController extends BaseController
         Long customerId = ParkingAuthUtils.resolveRequiredCustomerId(parkingCustomerMapper);
         if (!customerId.equals(order.getCustomerId()))
         {
-            throw new com.ruoyi.common.exception.ServiceException("Monthly order does not belong to current customer");
+            throw new com.ruoyi.common.exception.ServiceException("月卡订单不属于当前客户");
         }
     }
 }

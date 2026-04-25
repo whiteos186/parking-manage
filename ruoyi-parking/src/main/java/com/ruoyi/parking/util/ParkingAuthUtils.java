@@ -61,7 +61,7 @@ public class ParkingAuthUtils
         ParkingCustomer customer = resolveCustomer(mapper);
         if (customer == null)
         {
-            throw new ServiceException("Current user is not linked to a parking customer");
+            throw new ServiceException("当前用户未绑定停车客户");
         }
         return customer;
     }

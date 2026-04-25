@@ -86,7 +86,7 @@ public class ParkingMembershipOrderServiceImpl implements IParkingMembershipOrde
         if (order.getCustomerId() == null
             || parkingCustomerMapper.selectParkingCustomerById(order.getCustomerId()) == null)
         {
-            throw new ServiceException("Customer is required");
+            throw new ServiceException("客户不能为空");
         }
         if (order.getVehicleId() != null)
         {
@@ -94,7 +94,7 @@ public class ParkingMembershipOrderServiceImpl implements IParkingMembershipOrde
                 parkingUserVehicleMapper.selectParkingUserVehicleById(order.getVehicleId());
             if (vehicle == null || !order.getCustomerId().equals(vehicle.getCustomerId()))
             {
-                throw new ServiceException("Vehicle does not belong to order customer");
+                throw new ServiceException("车辆不属于订单客户");
             }
         }
         // Default amounts

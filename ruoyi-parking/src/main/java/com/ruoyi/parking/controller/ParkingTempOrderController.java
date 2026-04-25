@@ -135,7 +135,7 @@ public class ParkingTempOrderController extends BaseController
         Long customerId = ParkingAuthUtils.resolveRequiredCustomerId(parkingCustomerMapper);
         if (!customerId.equals(order.getCustomerId()))
         {
-            throw new com.ruoyi.common.exception.ServiceException("Temporary order does not belong to current customer");
+            throw new com.ruoyi.common.exception.ServiceException("临停订单不属于当前客户");
         }
     }
 }

@@ -101,11 +101,11 @@ public class ParkingUserVehicleServiceImpl implements IParkingUserVehicleService
     {
         if (parkingUserVehicle.getCustomerId() == null)
         {
-            throw new ServiceException("Customer is required");
+            throw new ServiceException("客户不能为空");
         }
         if (StringUtils.isEmpty(parkingUserVehicle.getPlateNo()))
         {
-            throw new ServiceException("Plate number is required");
+            throw new ServiceException("车牌号不能为空");
         }
         if (StringUtils.isEmpty(parkingUserVehicle.getVehicleType()))
         {

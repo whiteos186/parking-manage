@@ -89,7 +89,7 @@ public class ParkingMonthlyOrderServiceImpl implements IParkingMonthlyOrderServi
         if (parkingMonthlyOrder.getCustomerId() == null
             || parkingCustomerMapper.selectParkingCustomerById(parkingMonthlyOrder.getCustomerId()) == null)
         {
-            throw new ServiceException("Customer is required");
+            throw new ServiceException("客户不能为空");
         }
         if (parkingMonthlyOrder.getStartTime() == null)
         {
@@ -107,7 +107,7 @@ public class ParkingMonthlyOrderServiceImpl implements IParkingMonthlyOrderServi
                 parkingUserVehicleMapper.selectParkingUserVehicleById(parkingMonthlyOrder.getVehicleId());
             if (vehicle == null || !Objects.equals(vehicle.getCustomerId(), parkingMonthlyOrder.getCustomerId()))
             {
-                throw new ServiceException("Vehicle does not belong to order customer");
+                throw new ServiceException("车辆不属于订单客户");
             }
             if (StringUtils.isEmpty(parkingMonthlyOrder.getVehiclePlateNo()) && !StringUtils.isEmpty(vehicle.getPlateNo()))
             {
