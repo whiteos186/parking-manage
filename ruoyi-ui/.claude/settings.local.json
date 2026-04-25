@@ -38,7 +38,11 @@
       "Bash(npx chrome-devtools-mcp@latest --help)",
       "Bash(grep -l \"parking_lot_admin\\\\|parking_customer\\\\|parking_temp_order\\\\|parking_monthly_order\\\\|parking_membership_order\" \"D:\\\\code\\\\parking-management-system\\\\ruoyi-parking\\\\src\\\\main\\\\resources\\\\mapper\\\\parking\"/*.xml)",
       "WebSearch",
-      "Bash(grep -r \"createBy\\\\|createTime\\\\|updateBy\\\\|updateTime\" /d/code/parking-management-system/ruoyi-parking/src/main/resources/mapper/parking/*.xml)"
+      "Bash(grep -r \"createBy\\\\|createTime\\\\|updateBy\\\\|updateTime\" /d/code/parking-management-system/ruoyi-parking/src/main/resources/mapper/parking/*.xml)",
+      "Bash(gh api:*)",
+      "Bash(python -c \"import json,sys; data=json.load\\(sys.stdin\\); [print\\(d['name'], '-', d['type']\\) for d in data]\")",
+      "Bash(python:*)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   }
 }
