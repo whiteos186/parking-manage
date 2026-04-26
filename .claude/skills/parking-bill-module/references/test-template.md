@@ -290,7 +290,7 @@ assertEquals("'1'", {{resource}}FormPage.valuesByColumn().get("visible"));
 assertEquals("'C'", {{resource}}FormPage.valuesByColumn().get("menu_type"));
 ```
 
-`{{模块中文unicode}}` 替换成中文模块名的 Unicode 转义形式(因为 Java 源文件是 UTF-8 但项目里其他模块的字符串字面量已经写成 unicode 了)。例如 "维修工单" → `'\u7ef4\u4fee\u5de5\u5355'`。也可以直接写中文字符,只要文件保存为 UTF-8 即可。
+`{{模块中文unicode}}` 替换成中文模块名的 Unicode 转义形式(因为 Java 源文件是 UTF-8 但项目里其他模块的字符串字面量已经写成 unicode 了)。例如 "投诉处理单" → `'\u6295\u8bc9\u5904\u7406\u5355'`。也可以直接写中文字符,只要文件保存为 UTF-8 即可。
 
 **先 Read 当前 `ParkingMenuScriptTest.java`**,确认 N 的当前值和现有断言段的写法,再改。
 

@@ -59,9 +59,7 @@ You are the **tech lead** of a parking management system team. Your job is to un
 
 | Concern | Path |
 |---|---|
-| Bootstrap SQL | `sql/parking/parking_bootstrap.sql` |
-| Menu SQL | `sql/parking/parking_menu.sql` |
-| Upgrade SQL | `sql/parking/parking_upgrade_202604.sql` |
+| Parking SQL | `sql/parking/parking_init.sql` |
 | Controllers | `ruoyi-parking/src/main/java/com/ruoyi/parking/controller/` |
 | Domain | `ruoyi-parking/src/main/java/com/ruoyi/parking/domain/` |
 | Services | `ruoyi-parking/src/main/java/com/ruoyi/parking/service/` |

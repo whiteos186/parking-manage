@@ -3,9 +3,9 @@
   "evals": [
     {
       "id": 1,
-      "name": "eval-1-maintenance",
-      "prompt": "我要新增一个\"设备维修工单\"模块,挂在运营中心下面。字段:设备编码(必填,varchar 64)、故障类型(下拉:1硬件 2软件 3网络 4其他)、故障描述(必填,长文本 textarea)、预估金额(decimal)、计划维修时间(datetime)、实际维修时间(datetime)、所属停车场(必填)。需要默认的草稿→提交→审核通过/拒绝→作废 这套审核流程。请把后端、前端、SQL、菜单、测试都做齐。",
-      "expected_output": "完整的维修工单单据模块全套文件:Domain/Mapper/XML/Service/Controller、API/options/list/form、parking_bootstrap.sql 追加块、parking_menu.sql 追加块(10 个 insert 块)、Controller 单元测试、Schema/Menu 测试更新建议",
+      "name": "eval-1-complaint",
+      "prompt": "我要新增一个\"投诉处理单\"模块,挂在客户中心下面。字段:投诉编号(自动生成,varchar 32)、投诉来源(下拉:1电话 2现场 3线上 4其他)、投诉内容(必填,长文本 textarea)、处理负责人(varchar 64)、处理结果(textarea)、所属停车场(必填)。需要默认的草稿→提交→审核通过/拒绝→作废 这套审核流程。请把后端、前端、SQL、菜单、测试都做齐。",
+      "expected_output": "完整的投诉处理单单据模块全套文件:Domain/Mapper/XML/Service/Controller、API/options/list/form、统一追加到 sql/parking/parking_init.sql 的建表和菜单权限块、Controller 单元测试、Schema/Menu 测试更新建议",
       "files": []
     },
     {

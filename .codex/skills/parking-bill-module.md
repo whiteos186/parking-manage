@@ -49,7 +49,7 @@
 
 动任何代码前，必须和用户对齐以下 6 项。一次性把 6 个问题问完，不要挤牙膏：
 
-1. **模块名**：中文菜单标题（如"维修工单"）+ 英文 resource 代号（小写连字符，如 `maintenance`）。表名形如 `parking_maintenance_order`，Java 类名 `ParkingMaintenanceOrder`，路径 `/parking/maintenance`，权限前缀 `parking:maintenance:*`
+1. **模块名**：中文菜单标题（如"投诉处理单"）+ 英文 resource 代号（小写连字符，如 `complaint`）。表名形如 `parking_complaint_order`，Java 类名 `ParkingComplaintOrder`，路径 `/parking/complaint`，权限前缀 `parking:complaint:*`
 2. **挂载位置**：菜单放在哪个根目录下？（`基础档案` / `运营中心` / `客户中心`）
 3. **字段清单**：给出字段表（中文名 / 英文字段名 / 类型 / 是否必填 / 是否唯一）。"单据骨架字段"列在下面，用户只补业务字段
 4. **关联**：要不要 `lot_id`（停车场）？`customer_id`（客户）？`vehicle_id`（车辆）？其他外键？
@@ -280,7 +280,7 @@ export const <RESOURCE>_BILL_STATUS_OPTIONS = [
 ]
 ```
 
-**命名风格**：常量名 = `<MODULE>_BILL_STATUS_OPTIONS`，`<MODULE>` 是大写 resource 单段。例如 `MAINTENANCE_BILL_STATUS_OPTIONS`、`INSPECTION_BILL_STATUS_OPTIONS`。现有项目里订单类用的 `MEMBERSHIP_BIZ_STATUS_OPTIONS` / `TEMP_ORDER_BIZ_STATUS_OPTIONS` 是订单的双轨状态（`payStatus + bizStatus`）产物；**新单据走单一 `bill_status`，统一用 `_BILL_STATUS_OPTIONS`**。
+**命名风格**：常量名 = `<MODULE>_BILL_STATUS_OPTIONS`，`<MODULE>` 是大写 resource 单段。例如 `COMPLAINT_BILL_STATUS_OPTIONS`、`INSPECTION_BILL_STATUS_OPTIONS`。现有项目里订单类用的 `MEMBERSHIP_BIZ_STATUS_OPTIONS` / `TEMP_ORDER_BIZ_STATUS_OPTIONS` 是订单的双轨状态（`payStatus + bizStatus`）产物；**新单据走单一 `bill_status`，统一用 `_BILL_STATUS_OPTIONS`**。
 
 其他业务字典（类型、等级等）用同样的 `{ label, value, tagType }` 结构追加。不要新建文件。
 

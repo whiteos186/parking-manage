@@ -3,15 +3,15 @@
 本文件提供 Java 后端五大件(Domain / Mapper / XML / Service / Controller)的填空式模板。
 占位符用 `{{}}` 标记,替换规则:
 
-- `{{Entity}}` = PascalCase 实体名,如 `MaintenanceOrder`
-- `{{entity}}` = camelCase 实体名,如 `maintenanceOrder`
-- `{{ENTITY}}` = UPPER_SNAKE,如 `MAINTENANCE_ORDER`
-- `{{resource}}` = URL 段,如 `maintenance`
-- `{{table}}` = DB 表名,如 `parking_maintenance_order`
-- `{{pk}}` = 主键字段 camelCase,如 `maintenanceOrderId`
-- `{{pk_col}}` = 主键字段 snake,如 `maintenance_order_id`
-- `{{BillPrefix}}` = 业务编号前缀(2-3 字母),如 `MO`(MaintenanceOrder)
-- `{{模块中文}}` = 菜单标题,如 `维修工单`
+- `{{Entity}}` = PascalCase 实体名,如 `ComplaintOrder`
+- `{{entity}}` = camelCase 实体名,如 `complaintOrder`
+- `{{ENTITY}}` = UPPER_SNAKE,如 `COMPLAINT_ORDER`
+- `{{resource}}` = URL 段,如 `complaint`
+- `{{table}}` = DB 表名,如 `parking_complaint_order`
+- `{{pk}}` = 主键字段 camelCase,如 `complaintOrderId`
+- `{{pk_col}}` = 主键字段 snake,如 `complaint_order_id`
+- `{{BillPrefix}}` = 业务编号前缀(2-3 字母),如 `CO`(ComplaintOrder)
+- `{{模块中文}}` = 菜单标题,如 `投诉处理单`
 
 生成代码时逐处替换,替换完后把占位符全部删掉。业务字段用 `// BIZ` 注释块标记,从 Phase 0 的字段清单填进去。
 
@@ -735,20 +735,20 @@ public class Parking{{Entity}}Controller extends BaseController
 
 ## 命名速查
 
-| 维度 | 示例值(以 MaintenanceOrder 为例) |
+| 维度 | 示例值(以 ComplaintOrder 为例) |
 |---|---|
-| 中文模块名 | 维修工单 |
-| resource | maintenance |
-| table | parking_maintenance_order |
-| pk_col | maintenance_order_id |
-| Java 类前缀 | ParkingMaintenanceOrder |
-| pk (camelCase) | maintenanceOrderId |
-| URL 前缀 | /parking/maintenance |
-| 权限前缀 | parking:maintenance: |
+| 中文模块名 | 投诉处理单 |
+| resource | complaint |
+| table | parking_complaint_order |
+| pk_col | complaint_order_id |
+| Java 类前缀 | ParkingComplaintOrder |
+| pk (camelCase) | complaintOrderId |
+| URL 前缀 | /parking/complaint |
+| 权限前缀 | parking:complaint: |
 | BillPrefix | MO |
-| options.js 常量名 | MAINTENANCE_BILL_STATUS_OPTIONS |
-| 前端路由路径 | /parking/maintenance/form |
-| Vue 目录 | src/views/parking/maintenance/ |
-| API 文件 | src/api/parking/maintenance.js |
+| options.js 常量名 | COMPLAINT_BILL_STATUS_OPTIONS |
+| 前端路由路径 | /parking/complaint/form |
+| Vue 目录 | src/views/parking/complaint/ |
+| API 文件 | src/api/parking/complaint.js |
 
 表名、类名、路径的一致性是整个项目最重要的约定,替换时不能错位。

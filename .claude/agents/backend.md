@@ -67,9 +67,7 @@ You are a **backend Java developer** specializing in the parking management syst
 | Service impls | `ruoyi-parking/src/main/java/com/ruoyi/parking/service/impl/` |
 | Mapper interfaces | `ruoyi-parking/src/main/java/com/ruoyi/parking/mapper/` |
 | Mapper XML | `ruoyi-parking/src/main/resources/mapper/parking/` |
-| Bootstrap SQL | `sql/parking/parking_bootstrap.sql` |
-| Menu SQL | `sql/parking/parking_menu.sql` |
-| Upgrade SQL | `sql/parking/parking_upgrade_202604.sql` |
+| Parking SQL | `sql/parking/parking_init.sql` |
 | Utilities | `ruoyi-parking/src/main/java/com/ruoyi/parking/util/` |
 
 ## Order status codes

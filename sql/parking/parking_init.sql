@@ -4,7 +4,7 @@
 -- Execution order:
 --   1. DDL          (10 tables, updated schema)
 --   2. Seed data    (1 lot, 3 spaces, 1 customer, 1 vehicle, demo orders/payments)
---   3. Menus        (parking_menu.sql verbatim)
+--   3. Menus        (menu and permission seeds)
 --   4. Global config seeds (sys_config)
 --   5. Dict seeds   (sys_dict_type + sys_dict_data)
 --   6. Roles and test users
