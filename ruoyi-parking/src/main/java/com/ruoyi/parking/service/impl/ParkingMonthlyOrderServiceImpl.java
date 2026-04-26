@@ -172,28 +172,36 @@ public class ParkingMonthlyOrderServiceImpl implements IParkingMonthlyOrderServi
         {
             throw new ServiceException("订单已支付");
         }
-        current.setPayStatus("1");
-        current.setBizStatus("1");
-        current.setPayTime(LocalDateTime.now());
         if (form.getPayAmount() != null)
         {
             current.setPayAmount(form.getPayAmount());
         }
+        if (isMissingPositiveAmount(current.getPayAmount()))
+        {
+            current.setOriginalAmount(null);
+            current.setDiscountAmount(null);
+            current.setPayAmount(null);
+            recalcPricing(current);
+        }
+        BigDecimal cascadeAmount = current.getPayAmount() != null ? current.getPayAmount() : BigDecimal.ZERO;
+        if (cascadeAmount.compareTo(BigDecimal.ZERO) <= 0)
+        {
+            throw new ServiceException("月租订单支付金额必须大于0");
+        }
+        current.setPayStatus("1");
+        current.setBizStatus("1");
+        current.setPayTime(LocalDateTime.now());
 
         int rows = parkingMonthlyOrderMapper.updateParkingMonthlyOrder(current);
-        BigDecimal cascadeAmount = current.getPayAmount() != null ? current.getPayAmount() : BigDecimal.ZERO;
-        if (cascadeAmount.compareTo(BigDecimal.ZERO) > 0)
-        {
-            parkingPaymentRecordService.createPaymentForOrder(
-                current.getOrderNo(),
-                "2",
-                current.getCustomerId(),
-                current.getLotId(),
-                cascadeAmount,
-                null,
-                form.getUpdateBy()
-            );
-        }
+        parkingPaymentRecordService.createPaymentForOrder(
+            current.getOrderNo(),
+            "2",
+            current.getCustomerId(),
+            current.getLotId(),
+            cascadeAmount,
+            null,
+            form.getUpdateBy()
+        );
         if (current.getLotId() != null)
         {
             com.ruoyi.parking.domain.ParkingLot lot = parkingLotMapper.selectParkingLotById(current.getLotId());
@@ -253,7 +261,7 @@ public class ParkingMonthlyOrderServiceImpl implements IParkingMonthlyOrderServi
         ParkingSettingsDto.Pricing pricing = parkingGlobalRuleService.getValidatedPricing();
         ParkingSettingsDto.MemberDiscount memberDiscount = parkingGlobalRuleService.getValidatedMemberDiscount();
 
-        if (order.getOriginalAmount() == null)
+        if (isMissingPositiveAmount(order.getOriginalAmount()))
         {
             int months = order.getMonthCount() != null ? order.getMonthCount() : 1;
             order.setOriginalAmount(pricing.getMonthlyPrice().multiply(BigDecimal.valueOf(months)));
@@ -278,5 +286,10 @@ public class ParkingMonthlyOrderServiceImpl implements IParkingMonthlyOrderServi
                 : BigDecimal.ZERO;
             order.setPayAmount(order.getOriginalAmount().subtract(discount).max(BigDecimal.ZERO));
         }
+    }
+
+    private boolean isMissingPositiveAmount(BigDecimal amount)
+    {
+        return amount == null || amount.compareTo(BigDecimal.ZERO) <= 0;
     }
 }

@@ -2,11 +2,13 @@ package com.ruoyi.parking;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.parking.domain.ParkingCustomer;
 import com.ruoyi.parking.domain.ParkingTempOrder;
 import com.ruoyi.parking.domain.dto.ParkingSettingsDto;
@@ -109,6 +111,23 @@ class ParkingTempOrderPricingTest
         assertEquals(0, new BigDecimal("20.00").compareTo(update.getFeeAmount()));
         assertEquals(0, BigDecimal.ZERO.compareTo(update.getDiscountAmount()));
         assertEquals(0, new BigDecimal("20.00").compareTo(update.getPayAmount()));
+    }
+
+    @Test
+    void settleRequiresCalculatedPayAmount()
+    {
+        ParkingTempOrder current = new ParkingTempOrder();
+        current.setTempOrderId(3L);
+        current.setBizStatus("2");
+        current.setPayAmount(null);
+        when(tempOrderMapper.selectParkingTempOrderById(3L)).thenReturn(current);
+
+        ParkingTempOrder form = new ParkingTempOrder();
+        form.setTempOrderId(3L);
+
+        ServiceException ex = assertThrows(ServiceException.class, () -> service.settleParkingTempOrder(form));
+
+        assertEquals("订单尚未完成费用计算，无法结算", ex.getMessage());
     }
 
     private Date minutesAgoRoundedUp(int durationMinutes)

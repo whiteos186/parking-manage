@@ -237,6 +237,10 @@ public class ParkingTempOrderServiceImpl implements IParkingTempOrderService
         {
             throw new ServiceException("订单尚未出场，无法结算，当前状态：" + current.getBizStatus());
         }
+        if (current.getPayAmount() == null)
+        {
+            throw new ServiceException("订单尚未完成费用计算，无法结算");
+        }
 
         Date now = new Date();
         ParkingTempOrder update = new ParkingTempOrder();

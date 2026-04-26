@@ -3,7 +3,10 @@ package com.ruoyi.parking;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.ruoyi.parking.domain.ParkingCustomer;
@@ -29,6 +32,7 @@ class ParkingMonthlyOrderPricingTest
     private ParkingLotMapper lotMapper;
     private ParkingCustomerMapper customerMapper;
     private ParkingUserVehicleMapper vehicleMapper;
+    private IParkingPaymentRecordService paymentRecordService;
     private IParkingGlobalRuleService parkingGlobalRuleService;
     private ParkingMonthlyOrderServiceImpl service;
 
@@ -40,7 +44,7 @@ class ParkingMonthlyOrderPricingTest
         customerMapper = mock(ParkingCustomerMapper.class);
         vehicleMapper = mock(ParkingUserVehicleMapper.class);
         parkingGlobalRuleService = mock(IParkingGlobalRuleService.class);
-        IParkingPaymentRecordService paymentRecordService = mock(IParkingPaymentRecordService.class);
+        paymentRecordService = mock(IParkingPaymentRecordService.class);
 
         service = new ParkingMonthlyOrderServiceImpl(
             monthlyOrderMapper,
@@ -127,6 +131,40 @@ class ParkingMonthlyOrderPricingTest
         assertEquals(null, update.getOriginalAmount());
         assertEquals(null, update.getDiscountAmount());
         assertEquals(null, update.getPayAmount());
+    }
+
+    @Test
+    void payWithLegacyZeroAmountRecalculatesAndCreatesPaymentRecord()
+    {
+        ParkingMonthlyOrder existing = buildExistingOrder(4L, 1L, 2, 1L, null, "0.00", "0.00", "0.00");
+        existing.setOrderNo("MO202604260001");
+        when(monthlyOrderMapper.selectParkingMonthlyOrderById(4L)).thenReturn(existing);
+
+        ParkingCustomer customer = buildCustomer(1L, "0", null, null);
+        when(customerMapper.selectParkingCustomerById(1L)).thenReturn(customer);
+        ParkingLot lot = new ParkingLot();
+        lot.setAvailableSpaceCount(3);
+        when(lotMapper.selectParkingLotById(1L)).thenReturn(lot);
+
+        ParkingMonthlyOrder form = new ParkingMonthlyOrder();
+        form.setMonthlyOrderId(4L);
+        form.setUpdateBy("tester");
+
+        service.payMonthlyOrder(form);
+
+        assertEquals("1", existing.getPayStatus());
+        assertEquals("1", existing.getBizStatus());
+        assertEquals(0, new BigDecimal("840.00").compareTo(existing.getPayAmount()));
+        assertEquals(Integer.valueOf(2), lot.getAvailableSpaceCount());
+        verify(paymentRecordService).createPaymentForOrder(
+            eq("MO202604260001"),
+            eq("2"),
+            eq(1L),
+            eq(1L),
+            eq(new BigDecimal("840.00")),
+            isNull(),
+            eq("tester")
+        );
     }
 
     private ParkingMonthlyOrder buildExistingOrder(

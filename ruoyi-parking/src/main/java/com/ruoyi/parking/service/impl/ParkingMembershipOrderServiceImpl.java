@@ -5,13 +5,16 @@ import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.parking.domain.ParkingCustomer;
 import com.ruoyi.parking.domain.ParkingLot;
 import com.ruoyi.parking.domain.ParkingMembershipOrder;
+import com.ruoyi.parking.domain.dto.ParkingSettingsDto;
 import com.ruoyi.parking.mapper.ParkingCustomerMapper;
 import com.ruoyi.parking.mapper.ParkingLotMapper;
 import com.ruoyi.parking.mapper.ParkingMembershipOrderMapper;
 import com.ruoyi.parking.mapper.ParkingUserVehicleMapper;
+import com.ruoyi.parking.service.IParkingGlobalRuleService;
 import com.ruoyi.parking.service.IParkingMembershipOrderService;
 import com.ruoyi.parking.service.IParkingPaymentRecordService;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -23,23 +26,30 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ParkingMembershipOrderServiceImpl implements IParkingMembershipOrderService
 {
+    private static final BigDecimal SILVER_MEMBERSHIP_PRICE = new BigDecimal("100.00");
+    private static final BigDecimal GOLD_MEMBERSHIP_PRICE = new BigDecimal("300.00");
+    private static final BigDecimal PLATINUM_MEMBERSHIP_PRICE = new BigDecimal("600.00");
+
     private final ParkingMembershipOrderMapper membershipOrderMapper;
     private final ParkingLotMapper parkingLotMapper;
     private final ParkingCustomerMapper parkingCustomerMapper;
     private final ParkingUserVehicleMapper parkingUserVehicleMapper;
     private final IParkingPaymentRecordService parkingPaymentRecordService;
+    private final IParkingGlobalRuleService parkingGlobalRuleService;
 
     public ParkingMembershipOrderServiceImpl(ParkingMembershipOrderMapper membershipOrderMapper,
         ParkingLotMapper parkingLotMapper,
         ParkingCustomerMapper parkingCustomerMapper,
         ParkingUserVehicleMapper parkingUserVehicleMapper,
-        IParkingPaymentRecordService parkingPaymentRecordService)
+        IParkingPaymentRecordService parkingPaymentRecordService,
+        IParkingGlobalRuleService parkingGlobalRuleService)
     {
         this.membershipOrderMapper = membershipOrderMapper;
         this.parkingLotMapper = parkingLotMapper;
         this.parkingCustomerMapper = parkingCustomerMapper;
         this.parkingUserVehicleMapper = parkingUserVehicleMapper;
         this.parkingPaymentRecordService = parkingPaymentRecordService;
+        this.parkingGlobalRuleService = parkingGlobalRuleService;
     }
 
     @Override
@@ -97,15 +107,6 @@ public class ParkingMembershipOrderServiceImpl implements IParkingMembershipOrde
                 throw new ServiceException("车辆不属于订单客户");
             }
         }
-        // Default amounts
-        if (order.getOriginalAmount() == null)
-        {
-            order.setOriginalAmount(BigDecimal.ZERO);
-        }
-        if (order.getDiscountAmount() == null)
-        {
-            order.setDiscountAmount(BigDecimal.ZERO);
-        }
         // Default validity window
         if (order.getValidStartTime() == null)
         {
@@ -118,11 +119,7 @@ public class ParkingMembershipOrderServiceImpl implements IParkingMembershipOrde
             cal.add(Calendar.DAY_OF_YEAR, 365);
             order.setValidEndTime(cal.getTime());
         }
-        // Default payAmount = originalAmount - discountAmount
-        if (order.getPayAmount() == null)
-        {
-            order.setPayAmount(order.getOriginalAmount().subtract(order.getDiscountAmount()));
-        }
+        recalcPricing(order);
         return membershipOrderMapper.insertParkingMembershipOrder(order);
     }
 
@@ -162,32 +159,110 @@ public class ParkingMembershipOrderServiceImpl implements IParkingMembershipOrde
         {
             throw new ServiceException("订单已支付");
         }
-        order.setPayStatus("1");
-        order.setBizStatus("1");
-        order.setPayTime(new Date());
         if (form.getPayAmount() != null)
         {
             order.setPayAmount(form.getPayAmount());
         }
+        if (isMissingPositiveAmount(order.getPayAmount()))
+        {
+            order.setOriginalAmount(null);
+            order.setDiscountAmount(null);
+            order.setPayAmount(null);
+            recalcPricing(order);
+        }
+        BigDecimal cascadeAmount = order.getPayAmount() != null ? order.getPayAmount() : BigDecimal.ZERO;
+        if (cascadeAmount.compareTo(BigDecimal.ZERO) <= 0)
+        {
+            throw new ServiceException("会员订单支付金额必须大于0");
+        }
+        order.setPayStatus("1");
+        order.setBizStatus("1");
+        order.setPayTime(new Date());
         order.setUpdateBy(form.getUpdateBy());
         int rows = membershipOrderMapper.updateParkingMembershipOrder(order);
         // 支付成功后同步客户会员状态
         syncCustomerMembership(order);
         // Cascade a successful payment record so the payment ledger stays consistent.
-        BigDecimal cascadeAmount = order.getPayAmount() != null ? order.getPayAmount() : BigDecimal.ZERO;
-        if (cascadeAmount.compareTo(BigDecimal.ZERO) > 0)
-        {
-            parkingPaymentRecordService.createPaymentForOrder(
-                order.getOrderNo(),
-                "1",
-                order.getCustomerId(),
-                order.getLotId(),
-                cascadeAmount,
-                null,
-                form.getUpdateBy()
-            );
-        }
+        parkingPaymentRecordService.createPaymentForOrder(
+            order.getOrderNo(),
+            "1",
+            order.getCustomerId(),
+            order.getLotId(),
+            cascadeAmount,
+            null,
+            form.getUpdateBy()
+        );
         return rows;
+    }
+
+    private void recalcPricing(ParkingMembershipOrder order)
+    {
+        boolean originalMissing = isMissingPositiveAmount(order.getOriginalAmount());
+        if (originalMissing)
+        {
+            order.setOriginalAmount(resolveMembershipPrice(order.getMembershipType()));
+        }
+
+        if (order.getDiscountAmount() == null || (originalMissing && BigDecimal.ZERO.compareTo(order.getDiscountAmount()) == 0))
+        {
+            order.setDiscountAmount(calculateMembershipDiscount(order.getOriginalAmount(), order.getMembershipType()));
+        }
+
+        if (order.getPayAmount() == null || order.getPayAmount().compareTo(BigDecimal.ZERO) <= 0)
+        {
+            BigDecimal discount = order.getDiscountAmount() != null ? order.getDiscountAmount() : BigDecimal.ZERO;
+            order.setPayAmount(order.getOriginalAmount().subtract(discount).max(BigDecimal.ZERO));
+        }
+    }
+
+    private BigDecimal resolveMembershipPrice(String membershipType)
+    {
+        if ("2".equals(membershipType))
+        {
+            return GOLD_MEMBERSHIP_PRICE;
+        }
+        if ("3".equals(membershipType))
+        {
+            return PLATINUM_MEMBERSHIP_PRICE;
+        }
+        return SILVER_MEMBERSHIP_PRICE;
+    }
+
+    private BigDecimal calculateMembershipDiscount(BigDecimal originalAmount, String membershipType)
+    {
+        if (originalAmount == null || originalAmount.compareTo(BigDecimal.ZERO) <= 0)
+        {
+            return BigDecimal.ZERO;
+        }
+        ParkingSettingsDto.MemberDiscount memberDiscount = parkingGlobalRuleService.getValidatedMemberDiscount();
+        if (memberDiscount == null || !Boolean.TRUE.equals(memberDiscount.getMemberDiscountEnabled()))
+        {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal rate = resolveMembershipDiscountRate(memberDiscount, membershipType);
+        if (rate == null)
+        {
+            return BigDecimal.ZERO;
+        }
+        return originalAmount.multiply(rate).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal resolveMembershipDiscountRate(ParkingSettingsDto.MemberDiscount memberDiscount, String membershipType)
+    {
+        if ("2".equals(membershipType))
+        {
+            return memberDiscount.getGoldRate();
+        }
+        if ("3".equals(membershipType))
+        {
+            return memberDiscount.getPlatinumRate();
+        }
+        return memberDiscount.getSilverRate();
+    }
+
+    private boolean isMissingPositiveAmount(BigDecimal amount)
+    {
+        return amount == null || amount.compareTo(BigDecimal.ZERO) <= 0;
     }
 
     /** 会员订单支付后更新客户 is_member/member_type/member_expire_time */
