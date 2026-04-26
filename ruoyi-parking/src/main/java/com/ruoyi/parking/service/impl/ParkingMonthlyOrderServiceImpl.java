@@ -208,6 +208,7 @@ public class ParkingMonthlyOrderServiceImpl implements IParkingMonthlyOrderServi
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public int cancelMonthlyOrder(ParkingMonthlyOrder form)
     {
         ParkingMonthlyOrder current = parkingMonthlyOrderMapper.selectParkingMonthlyOrderById(
