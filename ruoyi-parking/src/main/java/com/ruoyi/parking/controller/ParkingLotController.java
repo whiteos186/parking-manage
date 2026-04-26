@@ -5,11 +5,11 @@ import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.core.page.TableDataInfo;
 import com.ruoyi.common.enums.BusinessType;
-import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.parking.domain.ParkingLot;
 import com.ruoyi.parking.mapper.ParkingLotAdminMapper;
 import com.ruoyi.parking.service.IParkingLotService;
 import com.ruoyi.parking.util.ParkingAuthUtils;
+import java.util.Collections;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -40,14 +40,7 @@ public class ParkingLotController extends BaseController
     public TableDataInfo list(ParkingLot parkingLot)
     {
         startPage();
-        if (!SecurityUtils.isAdmin(SecurityUtils.getUserId()) && ParkingAuthUtils.isLotAdmin())
-        {
-            Long scopedLotId = ParkingAuthUtils.resolveSingleLotId(parkingLotAdminMapper);
-            if (scopedLotId != null && parkingLot.getLotId() == null)
-            {
-                parkingLot.setLotId(scopedLotId);
-            }
-        }
+        parkingLot.setLotId(ParkingAuthUtils.enforceLotIdForLotAdmin(parkingLotAdminMapper, parkingLot.getLotId()));
         return getDataTable(parkingLotService.selectParkingLotList(parkingLot));
     }
 
@@ -55,6 +48,12 @@ public class ParkingLotController extends BaseController
     @GetMapping("/options")
     public AjaxResult options()
     {
+        Long scopedLotId = ParkingAuthUtils.enforceLotIdForLotAdmin(parkingLotAdminMapper, null);
+        if (scopedLotId != null)
+        {
+            ParkingLot one = parkingLotService.selectParkingLotById(scopedLotId);
+            return success(one == null ? Collections.emptyList() : Collections.singletonList(one));
+        }
         return success(parkingLotService.selectParkingLotOptions());
     }
 

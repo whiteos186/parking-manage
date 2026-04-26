@@ -44,20 +44,10 @@ public class ParkingPaymentRecordController extends BaseController
     public TableDataInfo list(ParkingPaymentRecord record)
     {
         startPage();
-        if (!SecurityUtils.isAdmin(SecurityUtils.getUserId()))
+        record.setLotId(ParkingAuthUtils.enforceLotIdForLotAdmin(parkingLotAdminMapper, record.getLotId()));
+        if (!SecurityUtils.isAdmin(SecurityUtils.getUserId()) && ParkingAuthUtils.isCustomer())
         {
-            if (ParkingAuthUtils.isLotAdmin())
-            {
-                Long scopedLotId = ParkingAuthUtils.resolveSingleLotId(parkingLotAdminMapper);
-                if (scopedLotId != null && record.getLotId() == null)
-                {
-                    record.setLotId(scopedLotId);
-                }
-            }
-            else if (ParkingAuthUtils.isCustomer())
-            {
-                record.setCustomerId(ParkingAuthUtils.resolveRequiredCustomerId(parkingCustomerMapper));
-            }
+            record.setCustomerId(ParkingAuthUtils.resolveRequiredCustomerId(parkingCustomerMapper));
         }
         return getDataTable(parkingPaymentRecordService.selectParkingPaymentRecordList(record));
     }

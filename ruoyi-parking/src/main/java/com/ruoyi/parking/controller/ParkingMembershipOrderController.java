@@ -44,20 +44,10 @@ public class ParkingMembershipOrderController extends BaseController
     public TableDataInfo list(ParkingMembershipOrder order)
     {
         startPage();
-        if (!SecurityUtils.isAdmin(SecurityUtils.getUserId()))
+        order.setLotId(ParkingAuthUtils.enforceLotIdForLotAdmin(parkingLotAdminMapper, order.getLotId()));
+        if (!SecurityUtils.isAdmin(SecurityUtils.getUserId()) && ParkingAuthUtils.isCustomer())
         {
-            if (ParkingAuthUtils.isLotAdmin())
-            {
-                Long scopedLotId = ParkingAuthUtils.resolveSingleLotId(parkingLotAdminMapper);
-                if (scopedLotId != null && order.getLotId() == null)
-                {
-                    order.setLotId(scopedLotId);
-                }
-            }
-            else if (ParkingAuthUtils.isCustomer())
-            {
-                order.setCustomerId(ParkingAuthUtils.resolveRequiredCustomerId(parkingCustomerMapper));
-            }
+            order.setCustomerId(ParkingAuthUtils.resolveRequiredCustomerId(parkingCustomerMapper));
         }
         return getDataTable(membershipOrderService.selectParkingMembershipOrderList(order));
     }

@@ -44,20 +44,11 @@ public class ParkingTempOrderController extends BaseController
     public TableDataInfo list(ParkingTempOrder parkingTempOrder)
     {
         startPage();
-        if (!SecurityUtils.isAdmin(SecurityUtils.getUserId()))
+        parkingTempOrder.setLotId(ParkingAuthUtils.enforceLotIdForLotAdmin(
+            parkingLotAdminMapper, parkingTempOrder.getLotId()));
+        if (!SecurityUtils.isAdmin(SecurityUtils.getUserId()) && ParkingAuthUtils.isCustomer())
         {
-            if (ParkingAuthUtils.isLotAdmin())
-            {
-                Long scopedLotId = ParkingAuthUtils.resolveSingleLotId(parkingLotAdminMapper);
-                if (scopedLotId != null && parkingTempOrder.getLotId() == null)
-                {
-                    parkingTempOrder.setLotId(scopedLotId);
-                }
-            }
-            else if (ParkingAuthUtils.isCustomer())
-            {
-                parkingTempOrder.setCustomerId(ParkingAuthUtils.resolveRequiredCustomerId(parkingCustomerMapper));
-            }
+            parkingTempOrder.setCustomerId(ParkingAuthUtils.resolveRequiredCustomerId(parkingCustomerMapper));
         }
         return getDataTable(parkingTempOrderService.selectParkingTempOrderList(parkingTempOrder));
     }

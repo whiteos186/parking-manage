@@ -5,7 +5,6 @@ import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.core.page.TableDataInfo;
 import com.ruoyi.common.enums.BusinessType;
-import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.parking.domain.ParkingSpace;
 import com.ruoyi.parking.mapper.ParkingLotAdminMapper;
 import com.ruoyi.parking.service.IParkingSpaceService;
@@ -40,14 +39,7 @@ public class ParkingSpaceController extends BaseController
     public TableDataInfo list(ParkingSpace parkingSpace)
     {
         startPage();
-        if (!SecurityUtils.isAdmin(SecurityUtils.getUserId()) && ParkingAuthUtils.isLotAdmin())
-        {
-            Long scopedLotId = ParkingAuthUtils.resolveSingleLotId(parkingLotAdminMapper);
-            if (scopedLotId != null && parkingSpace.getLotId() == null)
-            {
-                parkingSpace.setLotId(scopedLotId);
-            }
-        }
+        parkingSpace.setLotId(ParkingAuthUtils.enforceLotIdForLotAdmin(parkingLotAdminMapper, parkingSpace.getLotId()));
         return getDataTable(parkingSpaceService.selectParkingSpaceList(parkingSpace));
     }
 

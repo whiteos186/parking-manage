@@ -44,20 +44,11 @@ public class ParkingMonthlyOrderController extends BaseController
     public TableDataInfo list(ParkingMonthlyOrder parkingMonthlyOrder)
     {
         startPage();
-        if (!SecurityUtils.isAdmin(SecurityUtils.getUserId()))
+        parkingMonthlyOrder.setLotId(ParkingAuthUtils.enforceLotIdForLotAdmin(
+            parkingLotAdminMapper, parkingMonthlyOrder.getLotId()));
+        if (!SecurityUtils.isAdmin(SecurityUtils.getUserId()) && ParkingAuthUtils.isCustomer())
         {
-            if (ParkingAuthUtils.isLotAdmin())
-            {
-                Long scopedLotId = ParkingAuthUtils.resolveSingleLotId(parkingLotAdminMapper);
-                if (scopedLotId != null && parkingMonthlyOrder.getLotId() == null)
-                {
-                    parkingMonthlyOrder.setLotId(scopedLotId);
-                }
-            }
-            else if (ParkingAuthUtils.isCustomer())
-            {
-                parkingMonthlyOrder.setCustomerId(ParkingAuthUtils.resolveRequiredCustomerId(parkingCustomerMapper));
-            }
+            parkingMonthlyOrder.setCustomerId(ParkingAuthUtils.resolveRequiredCustomerId(parkingCustomerMapper));
         }
         return getDataTable(parkingMonthlyOrderService.selectParkingMonthlyOrderList(parkingMonthlyOrder));
     }

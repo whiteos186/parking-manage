@@ -47,6 +47,30 @@ public class ParkingAuthUtils
     }
 
     /**
+     * Resolve the effective lotId for the current request.
+     * - admin / non-lot_admin: returns requestedLotId unchanged
+     * - lot_admin without binding: throws
+     * - lot_admin with binding and matching/empty requestedLotId: returns bound lotId (overrides)
+     * - lot_admin with binding and non-matching requestedLotId: throws
+     */
+    public static Long enforceLotIdForLotAdmin(ParkingLotAdminMapper mapper, Long requestedLotId)
+    {
+        Long userId = SecurityUtils.getUserId();
+        if (SecurityUtils.isAdmin(userId)) return requestedLotId;
+        if (!isLotAdmin()) return requestedLotId;
+        Long scopedLotId = resolveSingleLotId(mapper);
+        if (scopedLotId == null)
+        {
+            throw new ServiceException("当前管理员未绑定停车场");
+        }
+        if (requestedLotId != null && !requestedLotId.equals(scopedLotId))
+        {
+            throw new ServiceException("无权访问其他停车场数据");
+        }
+        return scopedLotId;
+    }
+
+    /**
      * For customer users, return the ParkingCustomer linked to the current sys_user.
      * Returns null if the user is not a customer or no linked record exists.
      */
