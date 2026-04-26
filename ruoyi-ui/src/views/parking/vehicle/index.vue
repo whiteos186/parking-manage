@@ -6,7 +6,7 @@
           <el-option
             v-for="item in customerOptions"
             :key="item.customerId"
-            :label="formatCustomerOption(item)"
+            :label="item.optionLabel"
             :value="item.customerId"
           />
         </el-select>
@@ -105,11 +105,7 @@
       @pagination="getList"
     >
       <el-table-column label="车辆编号" align="center" prop="vehicleId" width="110" />
-      <el-table-column label="客户" align="center" min-width="220">
-        <template slot-scope="scope">
-          {{ customerLabel(scope.row.customerId) }}
-        </template>
-      </el-table-column>
+      <el-table-column label="客户名称" align="center" prop="customerName" min-width="140" show-overflow-tooltip />
       <el-table-column label="车牌号" align="center" prop="plateNo" width="130" />
       <el-table-column label="车辆类型" align="center" width="110">
         <template slot-scope="scope">
@@ -128,11 +124,7 @@
           <dict-tag :options="dict.type.parking_vehicle_status" :value="scope.row.status" />
         </template>
       </el-table-column>
-      <el-table-column label="绑定时间" align="center" prop="bindTime" width="170">
-        <template slot-scope="scope">
-          <span>{{ parseTime(scope.row.bindTime) }}</span>
-        </template>
-      </el-table-column>
+      <el-table-column label="绑定时间" align="center" prop="bindTime" width="170" />
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width" width="200">
         <template slot-scope="scope">
           <el-button
@@ -167,86 +159,22 @@
       </el-table-column>
     </data-table>
 
-    <form-dialog
-      :open.sync="open"
-      :title="title"
-      :model="form"
-      :rules="rules"
-      :submitting="submitting"
-      @submit="submitForm"
-      @cancel="reset"
-    >
-      <el-form-item label="客户" prop="customerId">
-        <el-select v-model="form.customerId" filterable placeholder="请选择客户" style="width: 100%">
-          <el-option
-            v-for="item in customerOptions"
-            :key="item.customerId"
-            :label="formatCustomerOption(item)"
-            :value="item.customerId"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="车牌号" prop="plateNo">
-        <el-input v-model="form.plateNo" placeholder="请输入车牌号" maxlength="20" show-word-limit />
-      </el-form-item>
-      <el-form-item label="车辆类型" prop="vehicleType">
-        <el-select v-model="form.vehicleType" placeholder="请选择车辆类型" style="width: 100%">
-          <el-option
-            v-for="item in dict.type.parking_vehicle_type"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="品牌" prop="brandName">
-        <el-input v-model="form.brandName" placeholder="请输入品牌名称" maxlength="50" />
-      </el-form-item>
-      <el-form-item label="颜色" prop="vehicleColor">
-        <el-input v-model="form.vehicleColor" placeholder="请输入车辆颜色" maxlength="20" />
-      </el-form-item>
-      <el-form-item label="状态" prop="status">
-        <el-radio-group v-model="form.status">
-          <el-radio v-for="item in dict.type.parking_vehicle_status" :key="item.value" :label="item.value">
-            {{ item.label }}
-          </el-radio>
-        </el-radio-group>
-      </el-form-item>
-      <el-form-item label="设为默认" prop="isDefault">
-        <el-radio-group v-model="form.isDefault">
-          <el-radio v-for="item in dict.type.parking_vehicle_default" :key="item.value" :label="item.value">
-            {{ item.label }}
-          </el-radio>
-        </el-radio-group>
-      </el-form-item>
-      <el-form-item label="备注" prop="remark">
-        <el-input
-          v-model="form.remark"
-          type="textarea"
-          :rows="3"
-          placeholder="请输入备注"
-          maxlength="500"
-          show-word-limit
-        />
-      </el-form-item>
-    </form-dialog>
   </div>
 </template>
 
 <script>
 import { listCustomerOptions } from '@/api/parking/customer'
-import { addVehicle, delVehicle, getVehicle, listVehicles, setDefaultVehicle, updateVehicle } from '@/api/parking/vehicle'
-import { findCustomerLabel, formatCustomerOption } from '../options'
-import { SearchForm, DataTable, FormDialog } from '../components'
+import { delVehicle, listVehicles, setDefaultVehicle } from '@/api/parking/vehicle'
+import { formatCustomerOption } from '../options'
+import { SearchForm, DataTable } from '../components'
 
 export default {
   name: 'ParkingUserVehicle',
-  components: { SearchForm, DataTable, FormDialog },
+  components: { SearchForm, DataTable },
   dicts: ['parking_vehicle_type', 'parking_vehicle_status', 'parking_vehicle_default'],
   data() {
     return {
       loading: true,
-      submitting: false,
       ids: [],
       single: true,
       multiple: true,
@@ -254,8 +182,6 @@ export default {
       total: 0,
       vehicleList: [],
       customerOptions: [],
-      title: '',
-      open: false,
       queryParams: {
         pageNum: 1,
         pageSize: 10,
@@ -264,19 +190,6 @@ export default {
         vehicleType: undefined,
         status: undefined,
         isDefault: undefined
-      },
-      form: {},
-      rules: {
-        customerId: [
-          { required: true, message: '客户不能为空', trigger: 'change' }
-        ],
-        plateNo: [
-          { required: true, message: '车牌号不能为空', trigger: 'blur' },
-          { max: 20, message: '车牌号不能超过 20 个字符', trigger: 'blur' }
-        ],
-        vehicleType: [
-          { required: true, message: '车辆类型不能为空', trigger: 'change' }
-        ]
       }
     }
   },
@@ -287,7 +200,7 @@ export default {
   methods: {
     getCustomerOptions() {
       listCustomerOptions().then(response => {
-        this.customerOptions = response.data || []
+        this.customerOptions = (response.data || []).map(item => ({ ...item, optionLabel: formatCustomerOption(item) }))
       })
     },
     getList() {
@@ -299,27 +212,12 @@ export default {
         this.loading = false
       })
     },
-    reset() {
-      this.form = {
-        vehicleId: undefined,
-        customerId: undefined,
-        plateNo: undefined,
-        vehicleType: '1',
-        brandName: undefined,
-        vehicleColor: undefined,
-        isDefault: '0',
-        status: '0',
-        remark: undefined
-      }
-    },
     handleQuery() {
       this.queryParams.pageNum = 1
       this.getList()
     },
     handleAdd() {
-      this.reset()
-      this.open = true
-      this.title = '新增车辆'
+      this.$router.push('/parking/vehicle/form')
     },
     handleSelectionChange(selection) {
       this.ids = selection.map(item => item.vehicleId)
@@ -327,24 +225,8 @@ export default {
       this.multiple = !selection.length
     },
     handleUpdate(row) {
-      this.reset()
       const vehicleId = row.vehicleId || this.ids[0]
-      getVehicle(vehicleId).then(response => {
-        this.form = response.data
-        this.open = true
-        this.title = '修改车辆'
-      })
-    },
-    submitForm() {
-      this.submitting = true
-      const request = this.form.vehicleId ? updateVehicle(this.form) : addVehicle(this.form)
-      request.then(() => {
-        this.$modal.msgSuccess(this.form.vehicleId ? '修改成功' : '新增成功')
-        this.open = false
-        this.getList()
-      }).finally(() => {
-        this.submitting = false
-      })
+      this.$router.push({ path: '/parking/vehicle/form', query: { id: vehicleId } })
     },
     handleDelete(row) {
       const vehicleIds = row.vehicleId || this.ids
@@ -362,12 +244,6 @@ export default {
         this.getList()
         this.$modal.msgSuccess('设置成功')
       }).catch(() => {})
-    },
-    formatCustomerOption(item) {
-      return formatCustomerOption(item)
-    },
-    customerLabel(customerId) {
-      return findCustomerLabel(this.customerOptions, customerId)
     }
   }
 }

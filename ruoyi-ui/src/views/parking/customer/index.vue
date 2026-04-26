@@ -139,75 +139,26 @@
       </el-table-column>
     </data-table>
 
-    <form-dialog
-      :open.sync="open"
-      :title="title"
-      :model="form"
-      :rules="rules"
-      :submitting="submitting"
-      @submit="submitForm"
-      @cancel="reset"
-    >
-      <el-form-item label="客户编号" prop="customerCode">
-        <el-input v-model="form.customerCode" placeholder="请输入客户编号" maxlength="32" show-word-limit />
-      </el-form-item>
-      <el-form-item label="客户名称" prop="customerName">
-        <el-input v-model="form.customerName" placeholder="请输入客户名称" maxlength="50" show-word-limit />
-      </el-form-item>
-      <el-form-item label="手机号" prop="mobile">
-        <el-input v-model="form.mobile" placeholder="请输入手机号" maxlength="20" />
-      </el-form-item>
-      <el-form-item label="客户类型" prop="customerType">
-        <el-select v-model="form.customerType" placeholder="请选择客户类型" style="width: 100%">
-          <el-option
-            v-for="item in dict.type.parking_customer_type"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="状态" prop="status">
-        <el-radio-group v-model="form.status">
-          <el-radio v-for="item in dict.type.parking_customer_status" :key="item.value" :label="item.value">
-            {{ item.label }}
-          </el-radio>
-        </el-radio-group>
-      </el-form-item>
-      <el-form-item label="备注" prop="remark">
-        <el-input
-          v-model="form.remark"
-          type="textarea"
-          :rows="3"
-          placeholder="请输入备注"
-          maxlength="500"
-          show-word-limit
-        />
-      </el-form-item>
-    </form-dialog>
   </div>
 </template>
 
 <script>
-import { addCustomer, delCustomer, getCustomer, listCustomers, updateCustomer } from '@/api/parking/customer'
-import { SearchForm, DataTable, FormDialog } from '../components'
+import { delCustomer, listCustomers } from '@/api/parking/customer'
+import { SearchForm, DataTable } from '../components'
 
 export default {
   name: 'ParkingCustomer',
-  components: { SearchForm, DataTable, FormDialog },
+  components: { SearchForm, DataTable },
   dicts: ['parking_customer_type', 'parking_customer_status'],
   data() {
     return {
       loading: true,
-      submitting: false,
       ids: [],
       single: true,
       multiple: true,
       showSearch: true,
       total: 0,
       customerList: [],
-      title: '',
-      open: false,
       queryParams: {
         pageNum: 1,
         pageSize: 10,
@@ -216,21 +167,6 @@ export default {
         mobile: undefined,
         customerType: undefined,
         status: undefined
-      },
-      form: {},
-      rules: {
-        customerCode: [
-          { required: true, message: '客户编号不能为空', trigger: 'blur' }
-        ],
-        customerName: [
-          { required: true, message: '客户名称不能为空', trigger: 'blur' }
-        ],
-        mobile: [
-          { required: true, message: '手机号不能为空', trigger: 'blur' }
-        ],
-        customerType: [
-          { required: true, message: '客户类型不能为空', trigger: 'change' }
-        ]
       }
     }
   },
@@ -247,34 +183,16 @@ export default {
         this.loading = false
       })
     },
-    reset() {
-      this.form = {
-        customerId: undefined,
-        customerCode: undefined,
-        customerName: undefined,
-        mobile: undefined,
-        customerType: '1',
-        status: '0',
-        remark: undefined
-      }
-    },
     handleQuery() {
       this.queryParams.pageNum = 1
       this.getList()
     },
     handleAdd() {
-      this.reset()
-      this.open = true
-      this.title = '新增客户档案'
+      this.$router.push('/parking/customer/form')
     },
     handleUpdate(row) {
-      this.reset()
       const customerId = row.customerId || this.ids[0]
-      getCustomer(customerId).then(response => {
-        this.form = response.data
-        this.open = true
-        this.title = '修改客户档案'
-      })
+      this.$router.push({ path: '/parking/customer/form', query: { id: customerId } })
     },
     handleDelete(row) {
       const customerIds = row.customerId || this.ids
@@ -290,17 +208,6 @@ export default {
       this.single = selection.length !== 1
       this.multiple = !selection.length
     },
-    submitForm() {
-      this.submitting = true
-      const request = this.form.customerId ? updateCustomer(this.form) : addCustomer(this.form)
-      request.then(() => {
-        this.$modal.msgSuccess(this.form.customerId ? '修改成功' : '新增成功')
-        this.open = false
-        this.getList()
-      }).finally(() => {
-        this.submitting = false
-      })
-    }
   }
 }
 </script>

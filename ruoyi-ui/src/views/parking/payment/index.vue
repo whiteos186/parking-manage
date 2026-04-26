@@ -55,7 +55,7 @@
           <el-option
             v-for="item in customerOptions"
             :key="item.customerId"
-            :label="formatCustomerOption(item)"
+            :label="item.optionLabel"
             :value="item.customerId"
           />
         </el-select>
@@ -132,11 +132,7 @@
           <dict-tag :options="dict.type.parking_payment_biz_type" :value="scope.row.bizOrderType" />
         </template>
       </el-table-column>
-      <el-table-column label="客户" align="center" min-width="220">
-        <template slot-scope="scope">
-          {{ customerLabel(scope.row.customerId) }}
-        </template>
-      </el-table-column>
+      <el-table-column label="客户名称" align="center" prop="customerName" min-width="140" show-overflow-tooltip />
       <el-table-column label="停车场" align="center" prop="lotName" min-width="140" show-overflow-tooltip />
       <el-table-column label="支付渠道" align="center" width="100">
         <template slot-scope="scope">
@@ -152,16 +148,8 @@
         </template>
       </el-table-column>
       <el-table-column label="交易号" align="center" prop="tradeNo" min-width="160" show-overflow-tooltip />
-      <el-table-column label="支付时间" align="center" prop="payTime" width="170">
-        <template slot-scope="scope">
-          <span>{{ parseTime(scope.row.payTime) }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="退款时间" align="center" prop="refundTime" width="170">
-        <template slot-scope="scope">
-          <span>{{ scope.row.refundTime ? parseTime(scope.row.refundTime) : '-' }}</span>
-        </template>
-      </el-table-column>
+      <el-table-column label="支付时间" align="center" prop="payTime" width="170" />
+      <el-table-column label="退款时间" align="center" prop="refundTime" width="170" />
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width" width="200">
         <template slot-scope="scope">
           <el-button
@@ -202,7 +190,7 @@
 import { delPayment, listPayments, refundPayment } from '@/api/parking/payment'
 import { listCustomerOptions } from '@/api/parking/customer'
 import { listParkingLotOptions } from '@/api/parking/lot'
-import { findCustomerLabel, formatCustomerOption, formatPrice } from '../options'
+import { formatCustomerOption } from '../options'
 import { SearchForm, DataTable } from '../components'
 
 export default {
@@ -260,7 +248,7 @@ export default {
     },
     getCustomerOptions() {
       listCustomerOptions().then(response => {
-        this.customerOptions = response.data || []
+        this.customerOptions = (response.data || []).map(item => ({ ...item, optionLabel: formatCustomerOption(item) }))
       })
     },
     handleQuery() {
@@ -299,13 +287,6 @@ export default {
         this.getList()
         this.$modal.msgSuccess('退款成功')
       }).catch(() => {})
-    },
-    formatPrice,
-    formatCustomerOption(item) {
-      return formatCustomerOption(item)
-    },
-    customerLabel(customerId) {
-      return findCustomerLabel(this.customerOptions, customerId)
     }
   }
 }

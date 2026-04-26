@@ -143,6 +143,76 @@ export const dynamicRoutes = [
     ]
   },
   {
+    path: '/parking/lot',
+    component: Layout,
+    hidden: true,
+    permissions: ['parking:lot:add', 'parking:lot:edit'],
+    children: [
+      {
+        path: 'form',
+        component: () => import('@/views/parking/lot/form'),
+        name: 'ParkingLotForm',
+        meta: { title: '停车场档案', activeMenu: '/parking/lot' }
+      }
+    ]
+  },
+  {
+    path: '/parking/space',
+    component: Layout,
+    hidden: true,
+    permissions: ['parking:space:add', 'parking:space:edit'],
+    children: [
+      {
+        path: 'form',
+        component: () => import('@/views/parking/space/form'),
+        name: 'ParkingSpaceForm',
+        meta: { title: '车位档案', activeMenu: '/parking/space' }
+      }
+    ]
+  },
+  {
+    path: '/parking/customer',
+    component: Layout,
+    hidden: true,
+    permissions: ['parking:customer:add', 'parking:customer:edit'],
+    children: [
+      {
+        path: 'form',
+        component: () => import('@/views/parking/customer/form'),
+        name: 'ParkingCustomerForm',
+        meta: { title: '客户档案', activeMenu: '/parking/customer' }
+      }
+    ]
+  },
+  {
+    path: '/parking/vehicle',
+    component: Layout,
+    hidden: true,
+    permissions: ['parking:vehicle:add', 'parking:vehicle:edit'],
+    children: [
+      {
+        path: 'form',
+        component: () => import('@/views/parking/vehicle/form'),
+        name: 'ParkingVehicleForm',
+        meta: { title: '车辆档案', activeMenu: '/parking/vehicle' }
+      }
+    ]
+  },
+  {
+    path: '/parking/lotadmin',
+    component: Layout,
+    hidden: true,
+    permissions: ['parking:lotadmin:add', 'parking:lotadmin:edit'],
+    children: [
+      {
+        path: 'form',
+        component: () => import('@/views/parking/lotadmin/form'),
+        name: 'ParkingLotAdminForm',
+        meta: { title: '管理员绑定', activeMenu: '/parking/lotadmin' }
+      }
+    ]
+  },
+  {
     path: '/parking/membership',
     component: Layout,
     hidden: true,

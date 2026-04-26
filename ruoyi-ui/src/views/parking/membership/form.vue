@@ -5,118 +5,11 @@
     :rules="rules"
     :loading="loading"
     :submitting="submitting"
+    label-width="96px"
     @submit="submitForm"
     @back="goBack"
   >
-    <el-form-item label="所属停车场" prop="lotId">
-      <el-select v-model="form.lotId" placeholder="请选择停车场" style="width: 360px">
-        <el-option
-          v-for="item in lotOptions"
-          :key="item.lotId"
-          :label="item.lotName"
-          :value="item.lotId"
-        />
-      </el-select>
-    </el-form-item>
-    <el-form-item label="客户" prop="customerId">
-      <el-select v-model="form.customerId" filterable placeholder="请选择客户" style="width: 360px" @change="handleCustomerChange">
-        <el-option
-          v-for="item in customerOptions"
-          :key="item.customerId"
-          :label="formatCustomerOption(item)"
-          :value="item.customerId"
-        />
-      </el-select>
-    </el-form-item>
-    <el-form-item label="车辆" prop="vehicleId">
-      <el-select
-        v-model="form.vehicleId"
-        filterable
-        clearable
-        :disabled="!form.customerId"
-        :placeholder="form.customerId ? '请选择车辆' : '请先选择客户'"
-        style="width: 360px"
-      >
-        <el-option
-          v-for="item in vehicleOptions"
-          :key="item.vehicleId"
-          :label="formatVehicleOption(item)"
-          :value="item.vehicleId"
-        />
-      </el-select>
-    </el-form-item>
-    <el-form-item label="会员类型" prop="membershipType">
-      <el-select v-model="form.membershipType" placeholder="请选择会员类型" style="width: 360px">
-        <el-option
-          v-for="item in dict.type.parking_membership_type"
-          :key="item.value"
-          :label="item.label"
-          :value="item.value"
-        />
-      </el-select>
-    </el-form-item>
-    <el-form-item label="有效期开始" prop="validStartTime">
-      <el-date-picker
-        v-model="form.validStartTime"
-        type="datetime"
-        placeholder="请选择有效期开始时间"
-        value-format="yyyy-MM-dd HH:mm:ss"
-        style="width: 360px"
-      />
-    </el-form-item>
-    <el-form-item label="有效期结束" prop="validEndTime">
-      <el-date-picker
-        v-model="form.validEndTime"
-        type="datetime"
-        placeholder="请选择有效期结束时间"
-        value-format="yyyy-MM-dd HH:mm:ss"
-        style="width: 360px"
-      />
-    </el-form-item>
-    <el-form-item label="原价" prop="originalAmount">
-      <el-input-number
-        v-model="form.originalAmount"
-        :min="0"
-        :precision="2"
-        :step="100"
-        controls-position="right"
-        style="width: 200px"
-      />
-      <span class="form-tip">元</span>
-    </el-form-item>
-    <el-form-item label="折扣金额" prop="discountAmount">
-      <el-input-number
-        v-model="form.discountAmount"
-        :min="0"
-        :precision="2"
-        :step="10"
-        controls-position="right"
-        style="width: 200px"
-      />
-      <span class="form-tip">元</span>
-    </el-form-item>
-    <el-form-item label="应付金额" prop="payAmount">
-      <el-input-number
-        v-model="form.payAmount"
-        :min="0"
-        :precision="2"
-        :step="100"
-        controls-position="right"
-        style="width: 200px"
-      />
-      <span class="form-tip">元（留空则自动计算原价 - 折扣）</span>
-    </el-form-item>
-    <el-form-item label="备注" prop="remark">
-      <el-input
-        v-model="form.remark"
-        type="textarea"
-        :rows="3"
-        placeholder="请输入备注"
-        maxlength="500"
-        show-word-limit
-        style="width: 360px"
-      />
-    </el-form-item>
+    <schema-form :model="form" :schema="schema" />
   </form-page>
 </template>
 
@@ -126,11 +19,11 @@ import { listCustomerOptions } from '@/api/parking/customer'
 import { listVehicleOptions } from '@/api/parking/vehicle'
 import { addMembershipOrder, getMembershipOrder, updateMembershipOrder } from '@/api/parking/membershipOrder'
 import { formatCustomerOption, formatVehicleOption } from '../options'
-import { FormPage } from '../components'
+import { FormPage, SchemaForm } from '../components'
 
 export default {
   name: 'MembershipOrderForm',
-  components: { FormPage },
+  components: { FormPage, SchemaForm },
   dicts: ['parking_membership_type'],
   data() {
     return {
@@ -164,6 +57,105 @@ export default {
   computed: {
     isEdit() {
       return !!this.$route.query.id
+    },
+    schema() {
+      return [
+        {
+          title: '订单信息',
+          fields: [
+            {
+              label: '所属停车场',
+              prop: 'lotId',
+              type: 'select',
+              attrs: { placeholder: '请选择停车场' },
+              options: this.lotOptions.map(item => ({ label: item.lotName, value: item.lotId }))
+            },
+            {
+              label: '客户',
+              prop: 'customerId',
+              type: 'select',
+              attrs: { filterable: true, placeholder: '请选择客户' },
+              on: { change: this.handleCustomerChange },
+              options: this.customerOptions.map(item => ({
+                label: item.optionLabel,
+                value: item.customerId
+              }))
+            },
+            {
+              label: '车辆',
+              prop: 'vehicleId',
+              type: 'select',
+              attrs: {
+                filterable: true,
+                clearable: true,
+                disabled: !this.form.customerId,
+                placeholder: this.form.customerId ? '请选择车辆' : '请先选择客户'
+              },
+              options: this.vehicleOptions.map(item => ({
+                label: formatVehicleOption(item),
+                value: item.vehicleId
+              }))
+            },
+            {
+              label: '会员类型',
+              prop: 'membershipType',
+              type: 'select',
+              attrs: { placeholder: '请选择会员类型' },
+              options: this.dict.type.parking_membership_type
+            }
+          ]
+        },
+        {
+          title: '有效期与金额',
+          fields: [
+            {
+              label: '有效期开始',
+              prop: 'validStartTime',
+              type: 'datetime',
+              attrs: { placeholder: '请选择有效期开始时间', 'value-format': 'yyyy-MM-dd HH:mm:ss' }
+            },
+            {
+              label: '有效期结束',
+              prop: 'validEndTime',
+              type: 'datetime',
+              attrs: { placeholder: '请选择有效期结束时间', 'value-format': 'yyyy-MM-dd HH:mm:ss' }
+            },
+            {
+              label: '原价',
+              prop: 'originalAmount',
+              type: 'number',
+              unit: '元',
+              attrs: { min: 0, precision: 2, step: 100, 'controls-position': 'right' }
+            },
+            {
+              label: '折扣金额',
+              prop: 'discountAmount',
+              type: 'number',
+              unit: '元',
+              attrs: { min: 0, precision: 2, step: 10, 'controls-position': 'right' }
+            },
+            {
+              label: '应付金额',
+              prop: 'payAmount',
+              type: 'number',
+              unit: '元',
+              tip: '留空则自动计算原价 - 折扣',
+              attrs: { min: 0, precision: 2, step: 100, 'controls-position': 'right' }
+            }
+          ]
+        },
+        {
+          fields: [
+            {
+              label: '备注',
+              prop: 'remark',
+              type: 'textarea',
+              wide: true,
+              attrs: { rows: 4, placeholder: '请输入备注', maxlength: 500, 'show-word-limit': true }
+            }
+          ]
+        }
+      ]
     }
   },
   created() {
@@ -181,7 +173,7 @@ export default {
     },
     getCustomerOptions() {
       listCustomerOptions().then(response => {
-        this.customerOptions = response.data || []
+        this.customerOptions = (response.data || []).map(item => ({ ...item, optionLabel: formatCustomerOption(item) }))
       })
     },
     getVehicleOptions(customerId, preserveSelection = false) {
@@ -224,20 +216,9 @@ export default {
         this.submitting = false
       })
     },
-    formatCustomerOption(item) {
-      return formatCustomerOption(item)
-    },
     formatVehicleOption(item) {
       return formatVehicleOption(item)
     }
   }
 }
 </script>
-
-<style scoped>
-.form-tip {
-  margin-left: 8px;
-  color: #909399;
-  font-size: 12px;
-}
-</style>

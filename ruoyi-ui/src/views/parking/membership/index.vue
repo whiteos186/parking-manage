@@ -25,7 +25,7 @@
           <el-option
             v-for="item in customerOptions"
             :key="item.customerId"
-            :label="formatCustomerOption(item)"
+            :label="item.optionLabel"
             :value="item.customerId"
           />
         </el-select>
@@ -116,26 +116,14 @@
     >
       <el-table-column label="订单编号" align="center" prop="orderNo" min-width="180" show-overflow-tooltip />
       <el-table-column label="停车场" align="center" prop="lotName" min-width="160" show-overflow-tooltip />
-      <el-table-column label="客户" align="center" min-width="220">
-        <template slot-scope="scope">
-          {{ customerLabel(scope.row.customerId) }}
-        </template>
-      </el-table-column>
+      <el-table-column label="客户名称" align="center" prop="customerName" min-width="140" show-overflow-tooltip />
       <el-table-column label="会员类型" align="center" width="100">
         <template slot-scope="scope">
           <dict-tag :options="dict.type.parking_membership_type" :value="scope.row.membershipType" />
         </template>
       </el-table-column>
-      <el-table-column label="有效期开始" align="center" prop="validStartTime" width="170">
-        <template slot-scope="scope">
-          <span>{{ parseTime(scope.row.validStartTime) }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="有效期结束" align="center" prop="validEndTime" width="170">
-        <template slot-scope="scope">
-          <span>{{ parseTime(scope.row.validEndTime) }}</span>
-        </template>
-      </el-table-column>
+      <el-table-column label="有效期开始" align="center" prop="validStartTime" width="170" />
+      <el-table-column label="有效期结束" align="center" prop="validEndTime" width="170" />
       <el-table-column label="应付金额" align="center" prop="payAmount" width="110">
         <template slot-scope="scope">¥{{ formatPrice(scope.row.payAmount) }}</template>
       </el-table-column>
@@ -149,11 +137,7 @@
           <dict-tag :options="dict.type.parking_membership_biz_status" :value="scope.row.bizStatus" />
         </template>
       </el-table-column>
-      <el-table-column label="创建时间" align="center" prop="createTime" width="170">
-        <template slot-scope="scope">
-          <span>{{ parseTime(scope.row.createTime) }}</span>
-        </template>
-      </el-table-column>
+      <el-table-column label="创建时间" align="center" prop="createTime" width="170" />
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width" width="220">
         <template slot-scope="scope">
           <el-button
@@ -227,7 +211,7 @@ import { listParkingLotOptions } from '@/api/parking/lot'
 import { listCustomerOptions } from '@/api/parking/customer'
 import { listVehicleOptions } from '@/api/parking/vehicle'
 import { cancelMembershipOrder, delMembershipOrder, listMembershipOrders, payMembershipOrder } from '@/api/parking/membershipOrder'
-import { findCustomerLabel, formatCustomerOption, formatPrice } from '../options'
+import { formatCustomerOption } from '../options'
 import { SearchForm, DataTable } from '../components'
 
 export default {
@@ -275,7 +259,7 @@ export default {
     },
     getCustomerOptions() {
       listCustomerOptions().then(response => {
-        this.customerOptions = response.data || []
+        this.customerOptions = (response.data || []).map(item => ({ ...item, optionLabel: formatCustomerOption(item) }))
       })
     },
     getVehicleOptions() {
@@ -346,13 +330,6 @@ export default {
         this.getList()
         this.$modal.msgSuccess('取消成功')
       }).catch(() => {})
-    },
-    formatPrice,
-    formatCustomerOption(item) {
-      return formatCustomerOption(item)
-    },
-    customerLabel(customerId) {
-      return findCustomerLabel(this.customerOptions, customerId)
     }
   }
 }

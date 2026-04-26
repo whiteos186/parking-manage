@@ -99,11 +99,7 @@
           <dict-tag :options="dict.type.parking_space_status" :value="scope.row.status" />
         </template>
       </el-table-column>
-      <el-table-column label="创建时间" align="center" prop="createTime" width="170">
-        <template slot-scope="scope">
-          <span>{{ parseTime(scope.row.createTime) }}</span>
-        </template>
-      </el-table-column>
+      <el-table-column label="创建时间" align="center" prop="createTime" width="170" />
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width" width="160">
         <template slot-scope="scope">
           <el-button
@@ -128,82 +124,21 @@
       </el-table-column>
     </data-table>
 
-    <form-dialog
-      :open.sync="open"
-      :title="title"
-      :model="form"
-      :rules="rules"
-      :submitting="submitting"
-      @submit="submitForm"
-      @cancel="reset"
-    >
-      <el-form-item label="所属停车场" prop="lotId">
-        <el-select v-model="form.lotId" placeholder="请选择停车场" style="width: 100%">
-          <el-option
-            v-for="item in lotOptions"
-            :key="item.lotId"
-            :label="item.lotName"
-            :value="item.lotId"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="车位编码" prop="spaceCode">
-        <el-input v-model="form.spaceCode" placeholder="请输入车位编码" maxlength="32" show-word-limit />
-      </el-form-item>
-      <el-form-item label="区域" prop="areaName">
-        <el-input v-model="form.areaName" placeholder="请输入区域" maxlength="64" />
-      </el-form-item>
-      <el-form-item label="楼层" prop="floorNo">
-        <el-input v-model="form.floorNo" placeholder="请输入楼层" maxlength="20" />
-      </el-form-item>
-      <el-form-item label="车位类型" prop="spaceType">
-        <el-select v-model="form.spaceType" placeholder="请选择车位类型" style="width: 100%">
-          <el-option
-            v-for="item in dict.type.parking_space_type"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="状态" prop="status">
-        <el-radio-group v-model="form.status">
-          <el-radio
-            v-for="item in dict.type.parking_space_status"
-            :key="item.value"
-            :label="item.value"
-          >
-            {{ item.label }}
-          </el-radio>
-        </el-radio-group>
-      </el-form-item>
-      <el-form-item label="备注" prop="remark">
-        <el-input
-          v-model="form.remark"
-          type="textarea"
-          :rows="3"
-          placeholder="请输入备注"
-          maxlength="500"
-          show-word-limit
-        />
-      </el-form-item>
-    </form-dialog>
   </div>
 </template>
 
 <script>
 import { listParkingLotOptions } from '@/api/parking/lot'
-import { addParkingSpace, delParkingSpace, getParkingSpace, listParkingSpaces, updateParkingSpace } from '@/api/parking/space'
-import { SearchForm, DataTable, FormDialog } from '../components'
+import { delParkingSpace, listParkingSpaces } from '@/api/parking/space'
+import { SearchForm, DataTable } from '../components'
 
 export default {
   name: 'ParkingSpace',
-  components: { SearchForm, DataTable, FormDialog },
+  components: { SearchForm, DataTable },
   dicts: ['parking_space_status', 'parking_space_type'],
   data() {
     return {
       loading: true,
-      submitting: false,
       ids: [],
       single: true,
       multiple: true,
@@ -211,30 +146,12 @@ export default {
       total: 0,
       spaceList: [],
       lotOptions: [],
-      title: '',
-      open: false,
       queryParams: {
         pageNum: 1,
         pageSize: 10,
         lotId: undefined,
         spaceCode: undefined,
         status: undefined
-      },
-      form: {},
-      rules: {
-        lotId: [
-          { required: true, message: '所属停车场不能为空', trigger: 'change' }
-        ],
-        spaceCode: [
-          { required: true, message: '车位编码不能为空', trigger: 'blur' },
-          { max: 32, message: '车位编码不能超过 32 个字符', trigger: 'blur' }
-        ],
-        spaceType: [
-          { required: true, message: '车位类型不能为空', trigger: 'change' }
-        ],
-        status: [
-          { required: true, message: '状态不能为空', trigger: 'change' }
-        ]
       }
     }
   },
@@ -257,26 +174,12 @@ export default {
         this.loading = false
       })
     },
-    reset() {
-      this.form = {
-        spaceId: undefined,
-        lotId: undefined,
-        spaceCode: undefined,
-        areaName: undefined,
-        floorNo: undefined,
-        spaceType: '1',
-        status: '0',
-        remark: undefined
-      }
-    },
     handleQuery() {
       this.queryParams.pageNum = 1
       this.getList()
     },
     handleAdd() {
-      this.reset()
-      this.open = true
-      this.title = '新增车位'
+      this.$router.push('/parking/space/form')
     },
     handleSelectionChange(selection) {
       this.ids = selection.map(item => item.spaceId)
@@ -284,24 +187,8 @@ export default {
       this.multiple = !selection.length
     },
     handleUpdate(row) {
-      this.reset()
       const spaceId = row.spaceId || this.ids[0]
-      getParkingSpace(spaceId).then(response => {
-        this.form = response.data
-        this.open = true
-        this.title = '修改车位'
-      })
-    },
-    submitForm() {
-      this.submitting = true
-      const request = this.form.spaceId ? updateParkingSpace(this.form) : addParkingSpace(this.form)
-      request.then(() => {
-        this.$modal.msgSuccess(this.form.spaceId ? '修改成功' : '新增成功')
-        this.open = false
-        this.getList()
-      }).finally(() => {
-        this.submitting = false
-      })
+      this.$router.push({ path: '/parking/space/form', query: { id: spaceId } })
     },
     handleDelete(row) {
       const spaceIds = row.spaceId || this.ids

@@ -101,11 +101,7 @@
           <dict-tag :options="dict.type.parking_lot_admin_status" :value="scope.row.status" />
         </template>
       </el-table-column>
-      <el-table-column label="创建时间" align="center" prop="createTime" width="170">
-        <template slot-scope="scope">
-          <span>{{ parseTime(scope.row.createTime) }}</span>
-        </template>
-      </el-table-column>
+      <el-table-column label="创建时间" align="center" prop="createTime" width="170" />
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width" width="160">
         <template slot-scope="scope">
           <el-button
@@ -130,86 +126,25 @@
       </el-table-column>
     </data-table>
 
-    <form-dialog
-      :open.sync="open"
-      :title="title"
-      width="480px"
-      :model="form"
-      :rules="rules"
-      :submitting="submitting"
-      @submit="submitForm"
-      @cancel="reset"
-    >
-      <el-form-item label="所属停车场" prop="lotId">
-        <el-select v-model="form.lotId" placeholder="请选择停车场" style="width: 100%">
-          <el-option
-            v-for="item in lotOptions"
-            :key="item.lotId"
-            :label="item.lotName"
-            :value="item.lotId"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="用户" prop="userId">
-        <el-select
-          v-model="form.userId"
-          filterable
-          placeholder="请选择用户"
-          style="width: 100%"
-        >
-          <el-option
-            v-for="item in userOptions"
-            :key="item.userId"
-            :label="userOptionLabel(item)"
-            :value="item.userId"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="状态" prop="status">
-        <el-radio-group v-model="form.status">
-          <el-radio
-            v-for="item in dict.type.parking_lot_admin_status"
-            :key="item.value"
-            :label="item.value"
-          >
-            {{ item.label }}
-          </el-radio>
-        </el-radio-group>
-      </el-form-item>
-      <el-form-item label="备注" prop="remark">
-        <el-input
-          v-model="form.remark"
-          type="textarea"
-          :rows="3"
-          placeholder="请输入备注"
-          maxlength="500"
-          show-word-limit
-        />
-      </el-form-item>
-    </form-dialog>
   </div>
 </template>
 
 <script>
 import { listParkingLotOptions } from '@/api/parking/lot'
 import {
-  addLotAdmin,
   delLotAdmin,
-  getLotAdmin,
   listLotAdmins,
-  listLotAdminUserOptions,
-  updateLotAdmin
+  listLotAdminUserOptions
 } from '@/api/parking/lotAdmin'
-import { SearchForm, DataTable, FormDialog } from '../components'
+import { SearchForm, DataTable } from '../components'
 
 export default {
   name: 'ParkingLotAdmin',
-  components: { SearchForm, DataTable, FormDialog },
+  components: { SearchForm, DataTable },
   dicts: ['parking_lot_admin_status'],
   data() {
     return {
       loading: true,
-      submitting: false,
       ids: [],
       single: true,
       multiple: true,
@@ -218,26 +153,12 @@ export default {
       lotAdminList: [],
       lotOptions: [],
       userOptions: [],
-      title: '',
-      open: false,
       queryParams: {
         pageNum: 1,
         pageSize: 10,
         lotId: undefined,
         userId: undefined,
         status: undefined
-      },
-      form: {},
-      rules: {
-        lotId: [
-          { required: true, message: '所属停车场不能为空', trigger: 'change' }
-        ],
-        userId: [
-          { required: true, message: '用户不能为空', trigger: 'change' }
-        ],
-        status: [
-          { required: true, message: '状态不能为空', trigger: 'change' }
-        ]
       }
     }
   },
@@ -275,23 +196,12 @@ export default {
         this.loading = false
       })
     },
-    reset() {
-      this.form = {
-        lotAdminId: undefined,
-        lotId: undefined,
-        userId: undefined,
-        status: '0',
-        remark: undefined
-      }
-    },
     handleQuery() {
       this.queryParams.pageNum = 1
       this.getList()
     },
     handleAdd() {
-      this.reset()
-      this.open = true
-      this.title = '新增管理员绑定'
+      this.$router.push('/parking/lotadmin/form')
     },
     handleSelectionChange(selection) {
       this.ids = selection.map(item => item.lotAdminId)
@@ -299,24 +209,8 @@ export default {
       this.multiple = !selection.length
     },
     handleUpdate(row) {
-      this.reset()
       const lotAdminId = row.lotAdminId || this.ids[0]
-      getLotAdmin(lotAdminId).then(response => {
-        this.form = response.data
-        this.open = true
-        this.title = '修改管理员绑定'
-      })
-    },
-    submitForm() {
-      this.submitting = true
-      const request = this.form.lotAdminId ? updateLotAdmin(this.form) : addLotAdmin(this.form)
-      request.then(() => {
-        this.$modal.msgSuccess(this.form.lotAdminId ? '修改成功' : '新增成功')
-        this.open = false
-        this.getList()
-      }).finally(() => {
-        this.submitting = false
-      })
+      this.$router.push({ path: '/parking/lotadmin/form', query: { id: lotAdminId } })
     },
     handleDelete(row) {
       const lotAdminIds = row.lotAdminId || this.ids

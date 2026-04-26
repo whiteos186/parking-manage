@@ -1,6 +1,6 @@
 <template>
   <form-page
-    :title="isEdit ? '修改临停订单' : '登记入场'"
+    :title="isEdit ? '修改管理员绑定' : '新增管理员绑定'"
     :model="form"
     :rules="rules"
     :loading="loading"
@@ -15,35 +15,30 @@
 
 <script>
 import { listParkingLotOptions } from '@/api/parking/lot'
-import { listCustomerOptions } from '@/api/parking/customer'
-import { addTempOrder, getTempOrder, updateTempOrder } from '@/api/parking/tempOrder'
-import { formatCustomerOption } from '../options'
+import { addLotAdmin, getLotAdmin, listLotAdminUserOptions, updateLotAdmin } from '@/api/parking/lotAdmin'
 import { FormPage, SchemaForm } from '../components'
 
 export default {
-  name: 'TempOrderForm',
+  name: 'ParkingLotAdminForm',
   components: { FormPage, SchemaForm },
+  dicts: ['parking_lot_admin_status'],
   data() {
     return {
       loading: false,
       submitting: false,
       lotOptions: [],
-      customerOptions: [],
+      userOptions: [],
       form: {
-        tempOrderId: undefined,
+        lotAdminId: undefined,
         lotId: undefined,
-        spaceId: undefined,
-        customerId: undefined,
-        vehiclePlateNo: undefined,
-        inTime: undefined,
+        userId: undefined,
+        status: '0',
         remark: undefined
       },
       rules: {
         lotId: [{ required: true, message: '所属停车场不能为空', trigger: 'change' }],
-        vehiclePlateNo: [
-          { required: true, message: '车牌号不能为空', trigger: 'blur' },
-          { max: 20, message: '车牌号不能超过 20 个字符', trigger: 'blur' }
-        ]
+        userId: [{ required: true, message: '用户不能为空', trigger: 'change' }],
+        status: [{ required: true, message: '状态不能为空', trigger: 'change' }]
       }
     }
   },
@@ -54,7 +49,7 @@ export default {
     schema() {
       return [
         {
-          title: '入场信息',
+          title: '绑定信息',
           fields: [
             {
               label: '所属停车场',
@@ -64,25 +59,20 @@ export default {
               options: this.lotOptions.map(item => ({ label: item.lotName, value: item.lotId }))
             },
             {
-              label: '客户',
-              prop: 'customerId',
+              label: '用户',
+              prop: 'userId',
               type: 'select',
-              attrs: { filterable: true, clearable: true, placeholder: '请选择客户' },
-              options: this.customerOptions.map(item => ({
-                label: item.optionLabel,
-                value: item.customerId
+              attrs: { filterable: true, placeholder: '请选择用户' },
+              options: this.userOptions.map(item => ({
+                label: this.userOptionLabel(item),
+                value: item.userId
               }))
             },
             {
-              label: '车牌号',
-              prop: 'vehiclePlateNo',
-              attrs: { placeholder: '请输入车牌号', maxlength: 20, 'show-word-limit': true }
-            },
-            {
-              label: '入场时间',
-              prop: 'inTime',
-              type: 'datetime',
-              attrs: { placeholder: '请选择入场时间', 'value-format': 'yyyy-MM-dd HH:mm:ss' }
+              label: '状态',
+              prop: 'status',
+              type: 'radio',
+              options: this.dict.type.parking_lot_admin_status
             }
           ]
         },
@@ -102,7 +92,7 @@ export default {
   },
   created() {
     this.getLotOptions()
-    this.getCustomerOptions()
+    this.getUserOptions()
     if (this.isEdit) {
       this.loadData()
     }
@@ -113,15 +103,24 @@ export default {
         this.lotOptions = response.data || []
       })
     },
-    getCustomerOptions() {
-      listCustomerOptions().then(response => {
-        this.customerOptions = (response.data || []).map(item => ({ ...item, optionLabel: formatCustomerOption(item) }))
+    getUserOptions() {
+      listLotAdminUserOptions().then(response => {
+        this.userOptions = response.data || []
+      }).catch(() => {
+        this.userOptions = []
       })
+    },
+    userOptionLabel(item) {
+      if (!item) {
+        return ''
+      }
+      const nickName = item.nickName || item.userName || ''
+      return `${nickName}（${item.userName} #${item.userId}）`
     },
     loadData() {
       this.loading = true
-      getTempOrder(this.$route.query.id).then(response => {
-        this.form = response.data
+      getLotAdmin(this.$route.query.id).then(response => {
+        this.form = Object.assign({}, this.form, response.data)
       }).finally(() => {
         this.loading = false
       })
@@ -131,9 +130,9 @@ export default {
     },
     submitForm() {
       this.submitting = true
-      const req = this.isEdit ? updateTempOrder(this.form) : addTempOrder(this.form)
-      req.then(() => {
-        this.$modal.msgSuccess(this.isEdit ? '修改成功' : '登记成功')
+      const request = this.isEdit ? updateLotAdmin(this.form) : addLotAdmin(this.form)
+      request.then(() => {
+        this.$modal.msgSuccess(this.isEdit ? '修改成功' : '新增成功')
         this.goBack()
       }).finally(() => {
         this.submitting = false

@@ -16,7 +16,7 @@
           <el-option
             v-for="item in customerOptions"
             :key="item.customerId"
-            :label="formatCustomerOption(item)"
+            :label="item.optionLabel"
             :value="item.customerId"
           />
         </el-select>
@@ -118,22 +118,10 @@
       <el-table-column label="订单编号" align="center" prop="tempOrderId" width="90" />
       <el-table-column label="订单号" align="center" prop="orderNo" min-width="180" show-overflow-tooltip />
       <el-table-column label="停车场" align="center" prop="lotName" min-width="140" show-overflow-tooltip />
-      <el-table-column label="客户" align="center" min-width="220">
-        <template slot-scope="scope">
-          {{ customerLabel(scope.row.customerId) }}
-        </template>
-      </el-table-column>
+      <el-table-column label="客户名称" align="center" prop="customerName" min-width="140" show-overflow-tooltip />
       <el-table-column label="车牌号" align="center" prop="vehiclePlateNo" width="120" />
-      <el-table-column label="入场时间" align="center" prop="inTime" width="170">
-        <template slot-scope="scope">
-          <span>{{ parseTime(scope.row.inTime) }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="出场时间" align="center" prop="outTime" width="170">
-        <template slot-scope="scope">
-          <span>{{ scope.row.outTime ? parseTime(scope.row.outTime) : '-' }}</span>
-        </template>
-      </el-table-column>
+      <el-table-column label="入场时间" align="center" prop="inTime" width="170" />
+      <el-table-column label="出场时间" align="center" prop="outTime" width="170" />
       <el-table-column label="时长(分钟)" align="center" prop="parkingDurationMin" width="100" />
       <el-table-column label="应收金额" align="center" prop="feeAmount" width="100">
         <template slot-scope="scope">¥{{ formatPrice(scope.row.feeAmount) }}</template>
@@ -213,6 +201,9 @@
         <el-form-item label="车牌号">
           <span>{{ settleForm.vehiclePlateNo }}</span>
         </el-form-item>
+        <el-form-item label="应付金额">
+          <span>¥{{ formatPrice(settleForm.payAmount) }}</span>
+        </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
         <el-button type="primary" :loading="settling" @click="submitSettle">确认已收款</el-button>
@@ -226,7 +217,7 @@
 import { listParkingLotOptions } from '@/api/parking/lot'
 import { listCustomerOptions } from '@/api/parking/customer'
 import { delTempOrder, entryTempOrder, exitTempOrder, listTempOrders, settleTempOrder } from '@/api/parking/tempOrder'
-import { findCustomerLabel, formatCustomerOption, formatPrice } from '../options'
+import { formatCustomerOption } from '../options'
 import { SearchForm, DataTable } from '../components'
 
 export default {
@@ -274,7 +265,7 @@ export default {
     },
     getCustomerOptions() {
       listCustomerOptions().then(response => {
-        this.customerOptions = response.data || []
+        this.customerOptions = (response.data || []).map(item => ({ ...item, optionLabel: formatCustomerOption(item) }))
       })
     },
     getList() {
@@ -335,10 +326,19 @@ export default {
       }).catch(() => {})
     },
     handleSettle(row) {
+      if (row.bizStatus !== '2') {
+        this.$modal.msgWarning('请先登记出场并完成费用计算')
+        return
+      }
+      if (row.payAmount === undefined || row.payAmount === null) {
+        this.$modal.msgWarning('当前订单尚未完成费用计算')
+        return
+      }
       this.settleForm = {
         tempOrderId: row.tempOrderId,
         orderNo: row.orderNo,
-        vehiclePlateNo: row.vehiclePlateNo
+        vehiclePlateNo: row.vehiclePlateNo,
+        payAmount: row.payAmount
       }
       this.settleOpen = true
     },
@@ -360,13 +360,6 @@ export default {
         this.getList()
         this.$modal.msgSuccess('删除成功')
       }).catch(() => {})
-    },
-    formatPrice,
-    formatCustomerOption(item) {
-      return formatCustomerOption(item)
-    },
-    customerLabel(customerId) {
-      return findCustomerLabel(this.customerOptions, customerId)
     }
   }
 }

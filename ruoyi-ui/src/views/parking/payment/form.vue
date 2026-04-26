@@ -5,93 +5,11 @@
     :rules="rules"
     :loading="loading"
     :submitting="submitting"
+    label-width="96px"
     @submit="submitForm"
     @back="goBack"
   >
-    <el-form-item label="业务订单号" prop="bizOrderNo">
-      <el-input
-        v-model="form.bizOrderNo"
-        placeholder="请输入业务订单号"
-        maxlength="32"
-        show-word-limit
-        style="width: 360px"
-      />
-    </el-form-item>
-    <el-form-item label="订单类型" prop="bizOrderType">
-      <el-select v-model="form.bizOrderType" placeholder="请选择订单类型" style="width: 360px">
-        <el-option
-          v-for="item in dict.type.parking_payment_biz_type"
-          :key="item.value"
-          :label="item.label"
-          :value="item.value"
-        />
-      </el-select>
-    </el-form-item>
-    <el-form-item label="停车场" prop="lotId">
-      <el-select v-model="form.lotId" clearable placeholder="请选择停车场" style="width: 360px">
-        <el-option
-          v-for="item in lotOptions"
-          :key="item.lotId"
-          :label="item.lotName"
-          :value="item.lotId"
-        />
-      </el-select>
-    </el-form-item>
-    <el-form-item label="客户" prop="customerId">
-      <el-select v-model="form.customerId" filterable clearable placeholder="请选择客户" style="width: 360px">
-        <el-option
-          v-for="item in customerOptions"
-          :key="item.customerId"
-          :label="formatCustomerOption(item)"
-          :value="item.customerId"
-        />
-      </el-select>
-    </el-form-item>
-    <el-form-item label="支付渠道" prop="payChannel">
-      <el-select v-model="form.payChannel" placeholder="请选择支付渠道" style="width: 360px">
-        <el-option
-          v-for="item in dict.type.parking_payment_channel"
-          :key="item.value"
-          :label="item.label"
-          :value="item.value"
-        />
-      </el-select>
-    </el-form-item>
-    <el-form-item label="支付金额" prop="payAmount">
-      <el-input-number
-        v-model="form.payAmount"
-        :min="0"
-        :precision="2"
-        :step="1"
-        controls-position="right"
-        style="width: 200px"
-      />
-      <span class="form-tip">元</span>
-    </el-form-item>
-    <el-form-item label="支付状态" prop="payStatus">
-      <el-select v-model="form.payStatus" placeholder="请选择支付状态" style="width: 360px">
-        <el-option
-          v-for="item in dict.type.parking_payment_status"
-          :key="item.value"
-          :label="item.label"
-          :value="item.value"
-        />
-      </el-select>
-    </el-form-item>
-    <el-form-item label="交易号" prop="tradeNo">
-      <el-input v-model="form.tradeNo" placeholder="留空则自动生成" maxlength="64" show-word-limit style="width: 360px" />
-    </el-form-item>
-    <el-form-item label="备注" prop="remark">
-      <el-input
-        v-model="form.remark"
-        type="textarea"
-        :rows="3"
-        placeholder="请输入备注"
-        maxlength="500"
-        show-word-limit
-        style="width: 360px"
-      />
-    </el-form-item>
+    <schema-form :model="form" :schema="schema" />
   </form-page>
 </template>
 
@@ -100,11 +18,11 @@ import { addPayment, getPayment, updatePayment } from '@/api/parking/payment'
 import { listCustomerOptions } from '@/api/parking/customer'
 import { listParkingLotOptions } from '@/api/parking/lot'
 import { formatCustomerOption } from '../options'
-import { FormPage } from '../components'
+import { FormPage, SchemaForm } from '../components'
 
 export default {
   name: 'PaymentForm',
-  components: { FormPage },
+  components: { FormPage, SchemaForm },
   dicts: ['parking_payment_biz_type', 'parking_payment_channel', 'parking_payment_status'],
   data() {
     return {
@@ -138,6 +56,86 @@ export default {
   computed: {
     isEdit() {
       return !!this.$route.query.id
+    },
+    schema() {
+      return [
+        {
+          title: '业务信息',
+          fields: [
+            {
+              label: '业务订单号',
+              prop: 'bizOrderNo',
+              attrs: { placeholder: '请输入业务订单号', maxlength: 32, 'show-word-limit': true }
+            },
+            {
+              label: '订单类型',
+              prop: 'bizOrderType',
+              type: 'select',
+              attrs: { placeholder: '请选择订单类型' },
+              options: this.dict.type.parking_payment_biz_type
+            },
+            {
+              label: '停车场',
+              prop: 'lotId',
+              type: 'select',
+              attrs: { clearable: true, placeholder: '请选择停车场' },
+              options: this.lotOptions.map(item => ({ label: item.lotName, value: item.lotId }))
+            },
+            {
+              label: '客户',
+              prop: 'customerId',
+              type: 'select',
+              attrs: { filterable: true, clearable: true, placeholder: '请选择客户' },
+              options: this.customerOptions.map(item => ({
+                label: item.optionLabel,
+                value: item.customerId
+              }))
+            }
+          ]
+        },
+        {
+          title: '支付信息',
+          fields: [
+            {
+              label: '支付渠道',
+              prop: 'payChannel',
+              type: 'select',
+              attrs: { placeholder: '请选择支付渠道' },
+              options: this.dict.type.parking_payment_channel
+            },
+            {
+              label: '支付金额',
+              prop: 'payAmount',
+              type: 'number',
+              unit: '元',
+              attrs: { min: 0, precision: 2, step: 1, 'controls-position': 'right' }
+            },
+            {
+              label: '支付状态',
+              prop: 'payStatus',
+              type: 'select',
+              attrs: { placeholder: '请选择支付状态' },
+              options: this.dict.type.parking_payment_status
+            },
+            {
+              label: '交易号',
+              prop: 'tradeNo',
+              attrs: { placeholder: '留空则自动生成', maxlength: 64, 'show-word-limit': true }
+            }
+          ]
+        },
+        {
+          fields: [
+            {
+              label: '备注',
+              prop: 'remark',
+              type: 'textarea',
+              wide: true,
+              attrs: { rows: 4, placeholder: '请输入备注', maxlength: 500, 'show-word-limit': true }
+            }
+          ]
+        }
+      ]
     }
   },
   created() {
@@ -155,7 +153,7 @@ export default {
     },
     getCustomerOptions() {
       listCustomerOptions().then(response => {
-        this.customerOptions = response.data || []
+        this.customerOptions = (response.data || []).map(item => ({ ...item, optionLabel: formatCustomerOption(item) }))
       })
     },
     loadData() {
@@ -178,18 +176,7 @@ export default {
       }).finally(() => {
         this.submitting = false
       })
-    },
-    formatCustomerOption(item) {
-      return formatCustomerOption(item)
     }
   }
 }
 </script>
-
-<style scoped>
-.form-tip {
-  margin-left: 8px;
-  color: #909399;
-  font-size: 12px;
-}
-</style>
