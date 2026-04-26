@@ -28,6 +28,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="updateTime" column="update_time"/>
         <result property="remark" column="remark"/>
         <result property="lotName" column="lot_name"/>
+        <result property="customerName" column="customer_name"/>
+        <result property="customerCode" column="customer_code"/>
+        <result property="mobile" column="mobile"/>
     </resultMap>
 
     <sql id="selectParkingTempOrderColumns">
@@ -54,9 +57,13 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             t.update_by,
             t.update_time,
             t.remark,
-            l.lot_name
+            l.lot_name,
+            c.customer_name,
+            c.customer_code,
+            c.mobile
         from parking_temp_order t
         left join parking_lot l on l.lot_id = t.lot_id and l.del_flag = '0'
+        left join parking_customer c on c.customer_id = t.customer_id and c.del_flag = '0'
     </sql>
 
     <select id="selectParkingTempOrderById" parameterType="Long" resultMap="ParkingTempOrderResult">

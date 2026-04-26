@@ -46,6 +46,15 @@ public class ParkingMembershipOrder extends BaseEntity
     /** 非持久化字段：停车场名称 */
     private transient String lotName;
 
+    /** 非持久化字段：客户名称 */
+    private String customerName;
+
+    /** 非持久化字段：客户编号 */
+    private String customerCode;
+
+    /** 非持久化字段：客户手机号 */
+    private String mobile;
+
     public Long getMembershipOrderId()
     {
         return membershipOrderId;
@@ -214,5 +223,35 @@ public class ParkingMembershipOrder extends BaseEntity
     public void setLotName(String lotName)
     {
         this.lotName = lotName;
+    }
+
+    public String getCustomerName()
+    {
+        return customerName;
+    }
+
+    public void setCustomerName(String customerName)
+    {
+        this.customerName = customerName;
+    }
+
+    public String getCustomerCode()
+    {
+        return customerCode;
+    }
+
+    public void setCustomerCode(String customerCode)
+    {
+        this.customerCode = customerCode;
+    }
+
+    public String getMobile()
+    {
+        return mobile;
+    }
+
+    public void setMobile(String mobile)
+    {
+        this.mobile = mobile;
     }
 }

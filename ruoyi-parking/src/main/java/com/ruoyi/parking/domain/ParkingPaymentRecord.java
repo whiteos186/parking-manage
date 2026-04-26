@@ -36,6 +36,15 @@ public class ParkingPaymentRecord extends BaseEntity
     /** transient: joined from parking_lot */
     private String lotName;
 
+    /** transient: joined from parking_customer */
+    private String customerName;
+
+    /** transient: joined from parking_customer */
+    private String customerCode;
+
+    /** transient: joined from parking_customer */
+    private String mobile;
+
     public Long getPaymentId()
     {
         return paymentId;
@@ -154,5 +163,35 @@ public class ParkingPaymentRecord extends BaseEntity
     public void setLotName(String lotName)
     {
         this.lotName = lotName;
+    }
+
+    public String getCustomerName()
+    {
+        return customerName;
+    }
+
+    public void setCustomerName(String customerName)
+    {
+        this.customerName = customerName;
+    }
+
+    public String getCustomerCode()
+    {
+        return customerCode;
+    }
+
+    public void setCustomerCode(String customerCode)
+    {
+        this.customerCode = customerCode;
+    }
+
+    public String getMobile()
+    {
+        return mobile;
+    }
+
+    public void setMobile(String mobile)
+    {
+        this.mobile = mobile;
     }
 }

@@ -30,6 +30,15 @@ public class ParkingUserVehicle extends BaseEntity
 
     private String delFlag;
 
+    /** Transient — joined from parking_customer for list view */
+    private String customerName;
+
+    /** Transient — joined from parking_customer for list view */
+    private String customerCode;
+
+    /** Transient — joined from parking_customer for list view */
+    private String mobile;
+
     public Long getVehicleId()
     {
         return vehicleId;
@@ -128,5 +137,35 @@ public class ParkingUserVehicle extends BaseEntity
     public void setDelFlag(String delFlag)
     {
         this.delFlag = delFlag;
+    }
+
+    public String getCustomerName()
+    {
+        return customerName;
+    }
+
+    public void setCustomerName(String customerName)
+    {
+        this.customerName = customerName;
+    }
+
+    public String getCustomerCode()
+    {
+        return customerCode;
+    }
+
+    public void setCustomerCode(String customerCode)
+    {
+        this.customerCode = customerCode;
+    }
+
+    public String getMobile()
+    {
+        return mobile;
+    }
+
+    public void setMobile(String mobile)
+    {
+        this.mobile = mobile;
     }
 }

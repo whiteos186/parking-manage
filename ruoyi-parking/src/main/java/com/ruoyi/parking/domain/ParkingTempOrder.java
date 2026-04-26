@@ -49,6 +49,15 @@ public class ParkingTempOrder extends BaseEntity
     /** Transient — joined from parking_lot for list view */
     private transient String lotName;
 
+    /** Transient — joined from parking_customer for list view */
+    private String customerName;
+
+    /** Transient — joined from parking_customer for list view */
+    private String customerCode;
+
+    /** Transient — joined from parking_customer for list view */
+    private String mobile;
+
     /** Transient — date range filter for inTime (start) */
     private transient String inTimeStart;
 
@@ -233,6 +242,36 @@ public class ParkingTempOrder extends BaseEntity
     public void setLotName(String lotName)
     {
         this.lotName = lotName;
+    }
+
+    public String getCustomerName()
+    {
+        return customerName;
+    }
+
+    public void setCustomerName(String customerName)
+    {
+        this.customerName = customerName;
+    }
+
+    public String getCustomerCode()
+    {
+        return customerCode;
+    }
+
+    public void setCustomerCode(String customerCode)
+    {
+        this.customerCode = customerCode;
+    }
+
+    public String getMobile()
+    {
+        return mobile;
+    }
+
+    public void setMobile(String mobile)
+    {
+        this.mobile = mobile;
     }
 
     public String getInTimeStart()

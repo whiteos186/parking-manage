@@ -20,69 +20,76 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="updateBy" column="update_by"/>
         <result property="updateTime" column="update_time"/>
         <result property="remark" column="remark"/>
+        <result property="customerName" column="customer_name"/>
+        <result property="customerCode" column="customer_code"/>
+        <result property="mobile" column="mobile"/>
     </resultMap>
 
     <sql id="selectParkingUserVehicleColumns">
         select
-            vehicle_id,
-            customer_id,
-            plate_no,
-            vehicle_type,
-            brand_name,
-            vehicle_color,
-            is_default,
-            status,
-            bind_time,
-            del_flag,
-            create_by,
-            create_time,
-            update_by,
-            update_time,
-            remark
-        from parking_user_vehicle
+            v.vehicle_id,
+            v.customer_id,
+            v.plate_no,
+            v.vehicle_type,
+            v.brand_name,
+            v.vehicle_color,
+            v.is_default,
+            v.status,
+            v.bind_time,
+            v.del_flag,
+            v.create_by,
+            v.create_time,
+            v.update_by,
+            v.update_time,
+            v.remark,
+            c.customer_name,
+            c.customer_code,
+            c.mobile
+        from parking_user_vehicle v
+        left join parking_customer c on c.customer_id = v.customer_id and c.del_flag = '0'
     </sql>
 
     <select id="selectParkingUserVehicleById" parameterType="Long" resultMap="ParkingUserVehicleResult">
         <include refid="selectParkingUserVehicleColumns"/>
-        where vehicle_id = #{vehicleId}
-          and del_flag = '0'
+        where v.vehicle_id = #{vehicleId}
+          and v.del_flag = '0'
     </select>
 
     <select id="selectParkingUserVehicleList" parameterType="ParkingUserVehicle" resultMap="ParkingUserVehicleResult">
         <include refid="selectParkingUserVehicleColumns"/>
-        where del_flag = '0'
+        where v.del_flag = '0'
         <if test="customerId != null">
-            and customer_id = #{customerId}
+            and v.customer_id = #{customerId}
         </if>
         <if test="plateNo != null and plateNo != ''">
-            and plate_no like concat('%', #{plateNo}, '%')
+            and v.plate_no like concat('%', #{plateNo}, '%')
         </if>
         <if test="vehicleType != null and vehicleType != ''">
-            and vehicle_type = #{vehicleType}
+            and v.vehicle_type = #{vehicleType}
         </if>
         <if test="status != null and status != ''">
-            and status = #{status}
+            and v.status = #{status}
         </if>
         <if test="isDefault != null and isDefault != ''">
-            and is_default = #{isDefault}
+            and v.is_default = #{isDefault}
         </if>
-        order by vehicle_id desc
+        order by v.vehicle_id desc
     </select>
 
     <select id="selectParkingUserVehicleOptions" resultMap="ParkingUserVehicleResult">
         <include refid="selectParkingUserVehicleColumns"/>
-        where del_flag = '0'
-          and status = '0'
+        where v.del_flag = '0'
+          and v.status = '0'
         <if test="customerId != null">
-            and customer_id = #{customerId}
+            and v.customer_id = #{customerId}
         </if>
-        order by is_default desc, vehicle_id desc
+        order by v.is_default desc, v.vehicle_id desc
     </select>
 
     <select id="selectParkingUserVehicleByPlateNo" parameterType="String" resultMap="ParkingUserVehicleResult">
         <include refid="selectParkingUserVehicleColumns"/>
-        where plate_no = #{plateNo}
-          and del_flag = '0'
+        where v.plate_no = #{plateNo}
+          and v.del_flag = '0'
         limit 1
     </select>
 
