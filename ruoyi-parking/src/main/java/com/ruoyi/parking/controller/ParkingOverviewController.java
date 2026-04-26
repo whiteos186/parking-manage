@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/parking")
 public class ParkingOverviewController extends BaseController
 {
-    private static final int RECENT_ORDERS_MAX_LIMIT = 50;
+    private static final int OVERVIEW_MAX_LIMIT = 50;
 
     private final IParkingOverviewService parkingOverviewService;
 
@@ -30,10 +30,23 @@ public class ParkingOverviewController extends BaseController
     }
 
     @PreAuthorize("@ss.hasPermi('parking:overview:list')")
+    @GetMapping("/overview/top-lots")
+    public AjaxResult topLots(@RequestParam(name = "limit", defaultValue = "5") int limit)
+    {
+        int sanitized = sanitizeLimit(limit);
+        return AjaxResult.success(parkingOverviewService.selectTopLots(sanitized));
+    }
+
+    @PreAuthorize("@ss.hasPermi('parking:overview:list')")
     @GetMapping("/overview/recent-orders")
     public AjaxResult recentOrders(@RequestParam(name = "limit", defaultValue = "5") int limit)
     {
-        int sanitized = Math.max(1, Math.min(limit, RECENT_ORDERS_MAX_LIMIT));
+        int sanitized = sanitizeLimit(limit);
         return AjaxResult.success(parkingOverviewService.selectRecentOrders(sanitized));
+    }
+
+    private int sanitizeLimit(int limit)
+    {
+        return Math.max(1, Math.min(limit, OVERVIEW_MAX_LIMIT));
     }
 }

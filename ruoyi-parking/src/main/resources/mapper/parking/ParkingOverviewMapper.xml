@@ -17,6 +17,17 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="activeTempOrderCount" column="active_temp_order_count"/>
     </resultMap>
 
+    <resultMap type="ParkingLotOverview" id="ParkingLotOverviewResult">
+        <id property="lotId" column="lot_id"/>
+        <result property="lotName" column="lot_name"/>
+        <result property="totalSpaceCount" column="total_space_count"/>
+        <result property="availableSpaceCount" column="available_space_count"/>
+        <result property="occupiedSpaceCount" column="occupied_space_count"/>
+        <result property="disabledSpaceCount" column="disabled_space_count"/>
+        <result property="lockedSpaceCount" column="locked_space_count"/>
+        <result property="occupancyRate" column="occupancy_rate"/>
+    </resultMap>
+
     <resultMap type="ParkingRecentOrder" id="ParkingRecentOrderResult">
         <result property="orderType" column="order_type"/>
         <result property="orderNo" column="order_no"/>
@@ -61,6 +72,31 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             </if>
         ) recent
         order by create_time desc
+        limit #{limit}
+    </select>
+
+    <select id="selectTopLots" resultMap="ParkingLotOverviewResult">
+        select
+            l.lot_id,
+            l.lot_name,
+            count(s.space_id) as total_space_count,
+            ifnull(sum(case when s.status = '0' then 1 else 0 end), 0) as available_space_count,
+            ifnull(sum(case when s.status = '1' then 1 else 0 end), 0) as occupied_space_count,
+            ifnull(sum(case when s.status = '2' then 1 else 0 end), 0) as disabled_space_count,
+            ifnull(sum(case when s.status = '3' then 1 else 0 end), 0) as locked_space_count,
+            case
+                when count(s.space_id) = 0 then 0
+                else round(ifnull(sum(case when s.status = '1' then 1 else 0 end), 0) * 100 / count(s.space_id), 0)
+            end as occupancy_rate
+        from parking_lot l
+        left join parking_space s on s.lot_id = l.lot_id and s.del_flag = '0'
+        where l.del_flag = '0'
+        <if test="lotIds != null and lotIds.size() > 0">
+          and l.lot_id in
+          <foreach collection="lotIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+        </if>
+        group by l.lot_id, l.lot_name
+        order by occupancy_rate desc, occupied_space_count desc, l.lot_id desc
         limit #{limit}
     </select>
 

@@ -7,6 +7,14 @@ export function getParkingOverviewStats() {
   })
 }
 
+export function getParkingTopLots(limit = 5) {
+  return request({
+    url: '/parking/overview/top-lots',
+    method: 'get',
+    params: { limit }
+  })
+}
+
 export function getParkingRecentOrders(limit = 5) {
   return request({
     url: '/parking/overview/recent-orders',

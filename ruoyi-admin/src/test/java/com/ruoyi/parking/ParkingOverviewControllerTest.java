@@ -15,6 +15,7 @@ import com.ruoyi.common.core.domain.entity.SysUser;
 import com.ruoyi.common.core.domain.model.LoginUser;
 import com.ruoyi.framework.web.service.PermissionService;
 import com.ruoyi.parking.controller.ParkingOverviewController;
+import com.ruoyi.parking.domain.ParkingLotOverview;
 import com.ruoyi.parking.domain.ParkingOverviewStats;
 import com.ruoyi.parking.service.IParkingOverviewService;
 import java.math.BigDecimal;
@@ -99,6 +100,39 @@ class ParkingOverviewControllerTest
             .andExpect(jsonPath("$.data.activeTempOrderCount").value(4));
 
         verify(overviewService).selectOverviewStats();
+    }
+
+    @Test
+    void topLotsEndpointReturnsRankedPayloadAndSanitizesLimit() throws Exception
+    {
+        IParkingOverviewService overviewService = Mockito.mock(IParkingOverviewService.class);
+        ParkingLotOverview lot = new ParkingLotOverview();
+        lot.setLotId(7L);
+        lot.setLotName("东门停车场");
+        lot.setTotalSpaceCount(120L);
+        lot.setAvailableSpaceCount(18L);
+        lot.setOccupiedSpaceCount(92L);
+        lot.setDisabledSpaceCount(6L);
+        lot.setLockedSpaceCount(4L);
+        lot.setOccupancyRate(new BigDecimal("77"));
+        when(overviewService.selectTopLots(50)).thenReturn(Arrays.asList(lot));
+
+        ParkingOverviewController controller = new ParkingOverviewController(overviewService);
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+
+        mockMvc.perform(get("/parking/overview/top-lots?limit=200"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(200))
+            .andExpect(jsonPath("$.data[0].lotId").value(7))
+            .andExpect(jsonPath("$.data[0].lotName").value("东门停车场"))
+            .andExpect(jsonPath("$.data[0].totalSpaceCount").value(120))
+            .andExpect(jsonPath("$.data[0].availableSpaceCount").value(18))
+            .andExpect(jsonPath("$.data[0].occupiedSpaceCount").value(92))
+            .andExpect(jsonPath("$.data[0].disabledSpaceCount").value(6))
+            .andExpect(jsonPath("$.data[0].lockedSpaceCount").value(4))
+            .andExpect(jsonPath("$.data[0].occupancyRate").value(77));
+
+        verify(overviewService).selectTopLots(50);
     }
 
     @Test
