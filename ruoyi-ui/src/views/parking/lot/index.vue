@@ -249,7 +249,7 @@ export default {
         lotId: undefined,
         lotName: undefined,
         lotAddress: undefined,
-        totalSpaceCount: 1,
+        totalSpaceCount: 100,
         monthlyPrice: undefined,
         tempHourPrice: undefined,
         status: '0',
