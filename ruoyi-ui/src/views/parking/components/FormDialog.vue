@@ -1,6 +1,6 @@
 <template>
   <el-dialog :title="title" :visible.sync="innerOpen" :width="width" @close="handleClose">
-    <el-form ref="innerForm" :model="model" :rules="rules" :label-width="labelWidth">
+    <el-form ref="innerForm" class="parking-dialog-form" :model="model" :rules="rules" :label-width="labelWidth">
       <slot />
     </el-form>
     <div slot="footer" class="dialog-footer">
@@ -16,7 +16,7 @@ export default {
   props: {
     open: Boolean,
     title: String,
-    width: { type: String, default: '560px' },
+    width: { type: String, default: '680px' },
     model: { type: Object, required: true },
     rules: Object,
     submitting: Boolean,
@@ -46,3 +46,21 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.parking-dialog-form ::v-deep .el-input,
+.parking-dialog-form ::v-deep .el-select,
+.parking-dialog-form ::v-deep .el-date-editor.el-input,
+.parking-dialog-form ::v-deep .el-date-editor.el-input__inner,
+.parking-dialog-form ::v-deep .el-textarea {
+  width: 100%;
+}
+
+.parking-dialog-form ::v-deep .el-input-number {
+  width: 100%;
+}
+
+.parking-dialog-form ::v-deep .el-input-number .el-input__inner {
+  text-align: left;
+}
+</style>

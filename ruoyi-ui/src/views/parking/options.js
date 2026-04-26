@@ -1,11 +1,3 @@
-export function formatPrice(value) {
-  const num = Number(value)
-  if (Number.isNaN(num)) {
-    return '0.00'
-  }
-  return num.toFixed(2)
-}
-
 export function findLabel(options = [], value, fallback = '-') {
   const item = options.find(it => String(it.value) === String(value))
   return item ? item.label : fallback
@@ -53,7 +45,3 @@ export function formatCustomerOption(item) {
   return parts.join(' / ')
 }
 
-export function findCustomerLabel(options = [], customerId, fallback = '-') {
-  const item = options.find(it => String(it.customerId) === String(customerId))
-  return item ? formatCustomerOption(item) : fallback
-}
